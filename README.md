@@ -1,3 +1,1 @@
-# AbyssEngine EntitySystem
-
-Entitysystem used in AbyssEngine
+# Entity system used in AbyssEngine
