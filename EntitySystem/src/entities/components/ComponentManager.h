@@ -2,6 +2,7 @@
 #include <vector>
 #include <typeinfo>
 #include "Component.h"
+#include "ComponentManagerIterator.h"
 #include "../Entity.h"
 
 // ComponentManager is a sorted collection of a specified type of component.
@@ -10,6 +11,11 @@ class ComponentManagerBase
 public:
 	// Inserts a component into the collection.
 	virtual void insertComponent(const Entity& entity, ComponentBase* component) = 0;
+
+	virtual ComponentBase* at(const size_t& index) = 0;
+
+	// Gets the entity associated with component at index
+	virtual Entity entityAtIndex(const size_t& index) const = 0;
 
 	// Inserts a component into the collection after checking that it stores the component type.
 	template <typename ComponentType>
@@ -25,6 +31,9 @@ public:
 
 	// Returns true if it found any components to erase. 
 	virtual bool eraseComponents(const Entity& entity) = 0; //! Not finished!
+
+	// Returns an iterator to the beginning of the ComponentManager
+	ComponentManagerIterator begin() { return ComponentManagerIterator(0, this); };
 
 	// Returns true if it stores the specified component type
 	template <typename ComponentType>
@@ -64,7 +73,7 @@ public:
 
 	~ComponentManager()
 	{
-		delete[] componentVector[0];
+		
 	};
 
 	// Inserts sorted, beginning from the back of the array
@@ -85,6 +94,11 @@ public:
 		componentVector.push_back(ComponentWrapper{ entity, *casted });
 	}
 
+	ComponentBase* at(const size_t& index)
+	{
+		return reinterpret_cast<ComponentBase*>(&(componentVector.at(index)));
+	}
+
 	bool eraseComponents(const Entity& entity) override  //! Not finished!
 	{
 		for (auto it = componentVector.begin(); it != componentVector.end(); it++)
@@ -96,6 +110,11 @@ public:
 			}
 		}
 		return false;
+	}
+
+	Entity entityAtIndex(const size_t& index) const
+	{
+		return componentVector.at(index).entity;
 	}
 
 	bool storesTypeHashed(const size_t& hash) override { return typeid(ComponentType).hash_code() == hash; };
