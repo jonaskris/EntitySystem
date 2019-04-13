@@ -1,14 +1,19 @@
 #include "ComponentManagerIterator.h"
 #include "ComponentManager.h"
-#include "Component.h"
+#include "../Entity.h"
+
+struct ComponentBase;
 
 bool ComponentManagerIterator::sameEntity(const ComponentManagerIterator& other) const
 {
 	return componentManager->entityAtIndex(index) == other.componentManager->entityAtIndex(other.index);
 };
 
-ComponentBase* ComponentManagerIterator::getCurrent() {
-	return static_cast<ComponentBase*>(componentManager->at(index));
+Entity ComponentManagerIterator::getCurrentEntity() { return componentManager->entityAtIndex(index); };
+
+ComponentBase* ComponentManagerIterator::getCurrent() const 
+{
+	return componentManager->at(index);
 };
 
 bool ComponentManagerIterator::increment()
@@ -27,7 +32,7 @@ bool ComponentManagerIterator::decrement()
 	return true;
 };
 
-bool ComponentManagerIterator::compare(const ComponentManagerIterator& other) const
+bool ComponentManagerIterator::operator < (const ComponentManagerIterator& other) const
 {
-	return componentManager->entityAtIndex(index) > other.componentManager->entityAtIndex(other.index);
+	return (componentManager->size() < other.componentManager->size());
 }

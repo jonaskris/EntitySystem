@@ -119,14 +119,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\entities\components\Component.cpp" />
     <ClCompile Include="src\entities\components\ComponentManagerIterator.cpp" />
     <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\systems\System.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\entities\EntityManager.h" />
     <ClInclude Include="src\entities\components\Component.h" />
     <ClInclude Include="src\entities\components\ComponentManager.h" />
     <ClInclude Include="src\entities\components\ComponentManagerIterator.h" />
     <ClInclude Include="src\entities\Entity.h" />
+    <ClInclude Include="src\systems\System.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
