@@ -1,66 +1,35 @@
 #pragma once
 #include <typeinfo>
 
-//! Define component bases
-
 /* 
 	For storing different types of components as pointers in one collection.
 */
-struct ComponentBase
+struct ComponentStoreType
 {
-	virtual ~ComponentBase() { };
+	virtual ~ComponentStoreType() { };
 };
 
 /*
-	Wraps a global variable that ensures ComponentIdentifer has an unique identifier for each ComponentType.
+	Wraps a global variable that ensures each Component has an unique identifier for each ComponentType.
 */
 class ComponentIdentifierCounter
 {
 	template <typename ComponentType>
-	friend class ComponentIdentifier;
+	friend struct Component;
 
 	static size_t counter;
 };
 
 /*
-	Used for setting and getting an unique identifier for every ComponentType.
-	Uses ComponentIdentifierCounter to keep track of used identifiers.
+	Base of every component.
 */
 template <typename ComponentType>
-class ComponentIdentifier : public ComponentBase
+struct Component : public ComponentStoreType
 {
-	static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType of ComponentIdentifier must be derived from ComponentBase");
 private:
 	static size_t identifier;
 public:
-	static size_t getIdentifier() 
-	{ 
-		if (identifier)
-			return identifier;
-		else
-			return identifier = ComponentIdentifierCounter::counter++;
-	};
-
+	static size_t getIdentifierStatic() { return identifier; };
 };
 template <typename ComponentType>
-size_t ComponentIdentifier<ComponentType>::identifier = 0;
-
-//! Define components
-
-/*
-	A vector component used for testing purposes.
-*/
-struct ComponentA : public ComponentBase
-{
-	float x, y, z;
-	ComponentA(float x, float y, float z) : x(x), y(y), z(z) {};
-};
-
-/*
-	A bool component used for testing purposes.
-*/
-struct ComponentB : public ComponentBase
-{
-	bool b;
-	ComponentB(bool b) : b(b) {};
-};
+size_t Component<ComponentType>::identifier = ComponentIdentifierCounter::counter++;

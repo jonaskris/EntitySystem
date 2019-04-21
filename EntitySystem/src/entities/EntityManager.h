@@ -1,15 +1,15 @@
 #pragma once
+#include <type_traits>
 #include <functional>
 #include <vector>
 #include <algorithm>
-#include "components/ComponentManager.h"
-#include "components/ComponentManagerIterator.h"
 #include "Entity.h"
 #include "../systems/System.h"
+#include "components/ComponentManager.h"
+#include "components/ComponentManagerIterator.h"
 
-#define EM_COMPONENTMANAGER_DEFAULT_INITIAL_CAPACITY 1024
 
-struct ComponentBase;
+struct ComponentStoreType;
 
 /*
 	Stores entities, systems and component managers,
@@ -21,7 +21,7 @@ private:
 	/*
 		Systems
 	*/
-	std::vector<System*> systems;
+	std::vector<SystemStoreType*> systems;
 
 	/*
 		Entities
@@ -30,69 +30,63 @@ private:
 	unsigned int entityCount = 0;
 	unsigned int entityCounter = 1; // For assigning entity id, 0 is null value
 
-private:
-	/*
-		Creates a new componentmanager of specified type.
-		Expects that a check is already done as to whether an existing componentManager stores the given type,
-		if not, unexpected behaviour may occur.
-	*/
-	template <typename ComponentType>
-	void newComponentManager()
-	{
-		componentManagers.push_back(new ComponentManager<ComponentType>(EM_COMPONENTMANAGER_DEFAULT_INITIAL_CAPACITY));
-	}
-
 	/*
 		Unpacks parameter pack of components when creating an entity, base case.
 	*/
-	template <typename C>
-	void unpackAndStoreComponentsInManagers(Entity e, C c)
+	template <typename ComponentType>
+	void unpackAndStoreComponentsInManagers(const Entity& entity, const ComponentType& component)
 	{
-		newComponent(e, c);
+		static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
+
+		newComponent(entity, component);
 	}
 
 	/*
 		Unpacks parameter pack of components when creating an entity, recursive case.
 	*/
-	template <typename C, typename... Rest>
-	void unpackAndStoreComponentsInManagers(Entity e, C c, Rest... rest)
+	template <typename ComponentType, typename... Rest>
+	void unpackAndStoreComponentsInManagers(const Entity& entity, const ComponentType& component, const Rest&... rest)
 	{
-		newComponent(e, c);
-		unpackAndStoreComponentsInManagers(e, rest...);
+		static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
+
+		newComponent(entity, component);
+		unpackAndStoreComponentsInManagers(entity, rest...);
 	}
 
 	/*
 		Unpacks parameter pack of ComponentTypes to get a vector of component manager iterators of their respective component managers, base case.
 	*/
-	template <typename C>
+	template <typename ComponentType>
 	std::vector<ComponentManagerIterator>& unpackAndGetComponentManagersIteratorsHelper(std::vector<ComponentManagerIterator>& vec)
 	{
+		static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
+
 		for (size_t i = 0; i < this->componentManagers.size(); i++)
-		{
-			if (this->componentManagers.at(i)->storesComponentType<C>())
+			if (this->componentManagers.at(i)->storesComponentType<ComponentType>())
 			{
 				vec.push_back(this->componentManagers.at(i)->begin());
 				return vec;
 			}
-		}
+		
 		return vec;
 	}
 
 	/*
 		Unpacks parameter pack of ComponentTypes to get a vector of component manager iterators of their respective component managers, recursive case.
 	*/
-	template <typename C, typename F, typename... Rest>
+	template <typename F, typename ComponentType, typename... Rest>
 	std::vector<ComponentManagerIterator>& unpackAndGetComponentManagersIteratorsHelper(std::vector<ComponentManagerIterator>& vec)
 	{
+		static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
+
 		for (size_t i = 0; i < this->componentManagers.size(); i++)
-		{
-			if (this->componentManagers.at(i)->storesComponentType<F>())
+			if (this->componentManagers.at(i)->storesComponentType<ComponentType>())
 			{
 				vec.push_back(this->componentManagers.at(i)->begin());
-				return unpackAndGetComponentManagersIteratorsHelper<C, Rest...>(vec);
+				return unpackAndGetComponentManagersIteratorsHelper<F, Rest...>(vec);
 			}
-		}
-		return unpackAndGetComponentManagersIteratorsHelper<C, Rest...>(vec);
+		
+		return unpackAndGetComponentManagersIteratorsHelper<F, Rest...>(vec);
 	}
 
 	/*
@@ -110,18 +104,13 @@ public:
 	~EntityManager() 
 	{
 		for (size_t i = 0; i < componentManagers.size(); i++)
-		{
 			delete componentManagers[i];
-		}
-
 		for (size_t i = 0; i < systems.size(); i++)
-		{
 			delete systems[i];
-		}
 	};
 
 	/*
-		Defines an entity.
+		Creates an entity.
 		Returns the entity.
 	*/
 	Entity newEntity()
@@ -129,74 +118,96 @@ public:
 		Entity newEntity{ entityCounter };
 		entityCount++;
 		entityCounter++;
-
+	
 		return newEntity;
 	}
 
 	/*
-		Defines an entity and stores components assigned to the new entity.
+		Creates an entity and stores components assigned to the new entity.
 		Returns the entity.
 	*/
 	template <typename... Components>
-	Entity newEntity(Components... components)
+	Entity newEntity(const Components&... components)
 	{
 		Entity newEntity{ entityCounter };
 		entityCount++;
 		entityCounter++;
 
-		unpackAndStoreComponentsInManagers(newEntity, std::forward<Components>(components)...);
+		unpackAndStoreComponentsInManagers(newEntity, components...);
+
 		return newEntity;
 	}
-
 
 	/*
 		Stores a component in componentmanagers and assigns it to the specified entity.
 	*/
 	template <typename ComponentType>
-	void newComponent(Entity e, ComponentType component)
+	void newComponent(const Entity& entity, const ComponentType& component)
 	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType of newComponent must be derived from ComponentBase!");
+		static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
 
 		// Try storing component in an existing manager.
 		for (size_t i = 0; i < componentManagers.size(); i++)
 			if (componentManagers.at(i)->storesComponentType<ComponentType>())
 			{
-				componentManagers.at(i)->insertComponent(e, &component);
+				componentManagers.at(i)->insertComponent(entity, component);
 				return;
 			}
-
+		
 		// If unsuccessful in storing component above, there were no component manager that stores given ComponentType.
 		// Create a new componentManager that stores the component type, and insert the component into the new manager. 
-		newComponentManager<ComponentType>();
-		componentManagers.back()->insertComponent(e, &component);
+		componentManagers.push_back(new ComponentManager<ComponentType>());
+		componentManagers.back()->insertComponent(entity, component);
+	}
+
+	/*
+		Erases component from every ComponentManager that belongs to specified entity.
+	*/
+	void eraseEntity(const Entity& entity)
+	{
+		bool erasedComponents = false;
+
+		for (size_t i = 0; i < componentManagers.size(); i++)
+			if (componentManagers.at(i)->eraseComponentOf(entity))
+				erasedComponents = true;
+
+		if (erasedComponents)
+			entityCount--;
+		return;
 	}
 
 	/*
 		Registers a system that will be used to update components on update call.
 		ConstructorArgs are optional.
+		Returns whether the system was registered successfully.
 	*/
 	template <typename SystemType, typename... ConstructorArgs>
-	void registerSystem(ConstructorArgs... constructorArgs)
+	bool registerSystem(ConstructorArgs... constructorArgs)
 	{
-		static_assert(std::is_base_of<System, SystemType>::value, "Can only register systems that are derived from System class!");
+		static_assert(std::is_base_of<SystemStoreType, SystemType>::value, "SystemType must be derived from SystemStoreType!");
 
-		systems.push_back(new SystemType(constructorArgs...));
-		systems.back()->setEntityManager(this);
+		// Check if a system of SystemType is already registered.
+		for (size_t i = 0; i < systems.size(); i++)
+			if (systems.at(i)->getIdentifier() == System<SystemType>::getIdentifierStatic())
+				return false;
+		
+		systems.push_back(new SystemType(this, constructorArgs...));
+		return true;
 	}
 
 	/* 
 		Executes a lambda on every entity that has specified set of component types.
 	*/
 	template <typename... ComponentTypes>
-	void each(std::function<void(std::vector<ComponentBase*>&)> lambda)
+	void each(std::function<void(std::vector<ComponentStoreType*>&)> lambda)
 	{
 		static_assert(sizeof...(ComponentTypes) > 0, "Cannot iterate over no components! Specify set of component types to iterate over in template argument.");
 
-		// Get each relevant componentmanager and create an iterator for it, if there's no componentmanager that stores one of the types; return. 
+		// Get each relevant componentmanager and create an iterator for it.
 		std::vector<ComponentManagerIterator> componentManagerIterators = unpackAndGetComponentManagersIterators<ComponentTypes...>();
 
-		// Check if iterator/manager was found for each of ComponentTypes.
-		if (sizeof...(ComponentTypes) > componentManagerIterators.size())
+		// Check if iterator/manager was found for each of ComponentTypes, if not, return.
+		if (sizeof...(ComponentTypes) != componentManagerIterators.size())
 			return;
 
 		// Since unpacking iterators results in reversed order, it must be reversed again to get original order.
@@ -205,32 +216,26 @@ public:
 		// While first iterator is not at end.
 		do
 		{
+			//For every other iterator.
 			for (size_t i = 1; i < componentManagerIterators.size(); i++)
 			{
-
-				// While entity is smaller than first iterators entity.
+				// While entity of component at current iterator is smaller than first iterators entity.
 				while (componentManagerIterators.at(i).getCurrentEntity() < componentManagerIterators.at(0).getCurrentEntity())
 					componentManagerIterators.at(i).increment();
 
-				/* 
-					If entity is bigger than first iterators entity, the first iterators entity doesent have specified set of components. 
-					Continue by ignoring this entity and continuing with the next entity of the first iterator. 
-				*/
-				if (!(componentManagerIterators.at(i).getCurrentEntity() == componentManagerIterators.at(0).getCurrentEntity()))
+				// If entity of component at first iterator is the same as entity of component at current iterator,
+				// continue by finding the same entity in next iterator.
+				if (!(componentManagerIterators.at(0).getCurrentEntity() == componentManagerIterators.at(i).getCurrentEntity()))
 					goto continueOuter;
-								
 			}
 
-			/* 
-				If reached this point, lambda can be executed with the components that iterators point to.
-				Get component of each iterator and execute lambda with vector of these components 
-			*/
+			// If reached this point, lambda can be executed with the components that iterators point to.
+			// Get component of each iterator and execute lambda with vector of these components 
 			{
-				std::vector<ComponentBase*> components;
+				std::vector<ComponentStoreType*> components;
 				for (size_t i = 0; i < componentManagerIterators.size(); i++)
-					components.push_back(componentManagerIterators.at(i).getCurrent());
+					components.push_back(componentManagerIterators.at(i).getCurrentComponent());
 				lambda(components);
-
 			}
 
 			continueOuter:;
@@ -243,29 +248,36 @@ public:
 	void update(const double& dt)
 	{
 		for (size_t i = 0; i < systems.size(); i++)
-		{
 			systems.at(i)->update(dt);
-		}
 	}
 
+	size_t sizeEntities() const { return entityCount; };
+	size_t sizeComponentManagers() const { return componentManagers.size(); };
+	size_t sizeSystems() const { return systems.size(); };
+	
+	template <typename ComponentType>
+	size_t sizeComponentManager()  const
+	{ 
+		for (size_t i = 0; i < componentManagers.size(); i++)
+			if (Component<ComponentType>::getIdentifierStatic() == componentManagers.at(i)->getIdentifier())
+				return componentManagers.at(i)->size();
 
-	size_t sizeEntities() { return entityCount; };
-	size_t sizeComponentManagers() { return componentManagers.size(); };
-	size_t sizeSystems() { return systems.size(); };
+		// If the component manager was not found.
+		return 0;
+	};
 
 	/*
-		Retrieves a copy of a component, used for testing purposes.
+		Retrieves a pointer to a component.
 	*/
 	template <typename ComponentType>
-	ComponentType getComponentCopyFromEntity(Entity e)
+	ComponentType* getComponentFromEntity(const Entity& entity)
 	{
+		static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
+
 		for (size_t i = 0; i < componentManagers.size(); i++)
-		{
 			if (componentManagers.at(i)->storesComponentType<ComponentType>())
-			{
-				return *static_cast<ComponentType*>(componentManagers.at(i)->getComponentFromEntity(e));
-			}
-		}
-		return *static_cast<ComponentType*>(nullptr);
+				return static_cast<ComponentType*>(componentManagers.at(i)->getComponentFromEntity(entity));
+
+		return static_cast<ComponentType*>(nullptr);
 	}
 };

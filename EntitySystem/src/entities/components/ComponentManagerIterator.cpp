@@ -2,18 +2,16 @@
 #include "ComponentManager.h"
 #include "../Entity.h"
 
-struct ComponentBase;
+struct ComponentStoreType;
 
-bool ComponentManagerIterator::sameEntity(const ComponentManagerIterator& other) const
-{
-	return componentManager->entityAtIndex(index) == other.componentManager->entityAtIndex(other.index);
+Entity ComponentManagerIterator::getCurrentEntity() const 
+{ 
+	return componentManager->entityAt(index); 
 };
 
-Entity ComponentManagerIterator::getCurrentEntity() { return componentManager->entityAtIndex(index); };
-
-ComponentBase* ComponentManagerIterator::getCurrent() const 
+ComponentStoreType* ComponentManagerIterator::getCurrentComponent() const 
 {
-	return componentManager->at(index);
+	return componentManager->componentAt(index);
 };
 
 bool ComponentManagerIterator::increment()

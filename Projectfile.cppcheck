@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="1">
+    <builddir>Projectfile-cppcheck-build-dir</builddir>
+    <platform>Unspecified</platform>
+    <importproject>EntitySystem.sln</importproject>
+    <analyze-all-vs-configs>true</analyze-all-vs-configs>
+    <suppressions>
+        <suppression>operatorEq</suppression>
+    </suppressions>
+</project>

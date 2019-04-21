@@ -5,6 +5,8 @@
 #include "ComponentManagerIterator.h"
 #include "../Entity.h"
 
+#define COMPONENTMANAGER_DEFAULT_INITIAL_CAPACITY 1024
+
 /* 
 	ComponentManager is a sorted collection of a specified type of component.
 */
@@ -13,7 +15,7 @@ class ComponentManagerBase
 	/* 
 		A virtual helper method to insert component into derived classes vector.
 	*/
-	virtual void insertComponentVirtual(const Entity& e, ComponentBase* c) = 0;
+	virtual void insertComponentVirtual(const Entity& entity, ComponentStoreType const* component) = 0;
 
 	/*
 		A virtual helper method that checks if the derived class stores a components assigned id.
@@ -29,23 +31,23 @@ public:
 	/*
 		Gets pointer to component at specified index.
 	*/
-	virtual ComponentBase* at(const size_t& index) = 0;
+	virtual ComponentStoreType* componentAt(const size_t& index) = 0;
 
 	/*
 		Gets pointer to component belonging to specified entity.
 	*/
-	virtual ComponentBase* getComponentFromEntity(Entity e) = 0;
+	virtual ComponentStoreType* getComponentFromEntity(const Entity& e) = 0;
 
 	/* 
 		Inserts a component into the collection after checking that it stores the component type. 
 	*/
 	template <typename ComponentType>
-	bool insertComponent(const Entity& entity, ComponentType* component) {
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType of ComponentManager.insertComponent must be derived from ComponentBase.");
+	bool insertComponent(const Entity& entity, const ComponentType& component) {
+		static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
 
 		if (storesComponentType<ComponentType>())
 		{
-			insertComponentVirtual(entity, component);
+			insertComponentVirtual(entity, &component);
 			return true;
 		}
 		else {
@@ -57,7 +59,7 @@ public:
 		Erases components belonging to specified entity.
 		Returns true if it found any components to erase. 
 	*/
-	virtual bool eraseComponents(const Entity& entity) = 0; //! Not finished!
+	virtual bool eraseComponentOf(const Entity& entity) = 0;
 
 	/* 
 		Returns a ComponentManagerIterator to the beginning of the ComponentManager.
@@ -66,10 +68,14 @@ public:
 
 	template <typename ComponentType>
 	bool storesComponentType() {
-		return storesTypeId(ComponentIdentifier<ComponentType>::getIdentifier());
+		static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
+
+		return storesTypeId(Component<ComponentType>::getIdentifierStatic());
 	};
 
-	virtual Entity entityAtIndex(const size_t& index) const = 0;
+	virtual Entity entityAt(const size_t& index) const = 0;
+
+	virtual size_t getIdentifier() const = 0;
 
 	virtual size_t size() const = 0;
 };
@@ -80,7 +86,7 @@ public:
 template <typename ComponentType>
 struct ComponentWrapper
 {
-	static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType of ComponentWrapper must be derived from ComponentBase!");
+	static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
 
 	Entity entity;
 	ComponentType component;
@@ -90,40 +96,41 @@ struct ComponentWrapper
 template <typename ComponentType>
 class ComponentManager : public ComponentManagerBase
 {
-	static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType of ComponentManager must be derived from ComponentBase!");
+	static_assert(std::is_base_of<ComponentStoreType, ComponentType>::value, "ComponentType must be derived from ComponentStoreType!");
 
 	friend class ComponentManagerIterator;
+
+	static size_t componentTypeIdentifier;
 
 	std::vector<ComponentWrapper<ComponentType>> componentVector;
 
 	/* 
 		Inserts sorted, beginning from the back of the array.
 	*/
-	void insertComponentVirtual(const Entity& e, ComponentBase* c) override
+	void insertComponentVirtual(const Entity& entity, ComponentStoreType const* component) override
 	{
-		ComponentType* casted = static_cast<ComponentType*>(c);
-
 		for (auto it = componentVector.rbegin(); it != componentVector.rend(); it++)
 		{
-			if (e > (*it).entity)
+			if (entity > (*it).entity)
 			{
-				componentVector.insert(it.base(), ComponentWrapper{ e, *casted });
+				ComponentWrapper wrapped = ComponentWrapper{ Entity{ entity.id }, *((ComponentType*)component) };
+				componentVector.insert(it.base(), wrapped);
 				return;
 			}
 		}
-		componentVector.push_back(ComponentWrapper{ e, *casted });
+		componentVector.push_back(ComponentWrapper{ entity, *((ComponentType*)component) });
 	}
 
 	/*
 		Checks that the component manager stores component with specified identifier.
 		Components are assigned id from ComponentIdentifier.
 	*/
-	bool storesTypeId(const size_t& id) const override { return ComponentIdentifier<ComponentType>::getIdentifier() == id; };
+	bool storesTypeId(const size_t& id) const override { return Component<ComponentType>::getIdentifierStatic() == id; };
 public:
 
-	ComponentManager(const size_t& InitialCapacity)
+	ComponentManager()
 	{
-		componentVector.reserve(InitialCapacity);
+		componentVector.reserve(COMPONENTMANAGER_DEFAULT_INITIAL_CAPACITY);
 	};
 
 	~ComponentManager() { };
@@ -132,47 +139,81 @@ public:
 	/*
 		Gets pointer to component at specified index.
 	*/
-	ComponentBase* at(const size_t& index) override
+	ComponentStoreType* componentAt(const size_t& index) override
 	{
-		return &(componentVector.at(index).component);
+		if(index < componentVector.size())
+			return &(componentVector.at(index).component);
+		return static_cast<ComponentStoreType*>(nullptr);
 	}
 
 	/*
-		Gets pointer to component belonging to specified entity.
+		Gets pointer to component belonging to specified entity using binary search.
+		Returns null pointer if not found.
 	*/
-	ComponentBase* getComponentFromEntity(Entity e) override
+	ComponentStoreType* getComponentFromEntity(const Entity& e) override
 	{
-		for (size_t i = 0; i < componentVector.size(); i++) 
+		size_t l = 0;
+		size_t r = componentVector.size() - 1;
+
+		while (l <= r)
 		{
-			if (componentVector.at(i).entity == e)
+			size_t m = (l + r) / 2;
+
+			if (componentVector.at(m).entity < e)
 			{
-				return static_cast<ComponentBase*>(&componentVector.at(i).component);
+				l = m + 1;
+			} else if (componentVector.at(m).entity > e)
+			{
+				if (r == 0 || m == 0)			// To avoid underflow
+					return static_cast<ComponentStoreType*>(nullptr);
+				r = m - 1;
+			} else
+			{
+				return static_cast<ComponentStoreType*>(&(*(componentVector.begin() + m)).component);
 			}
 		}
-		return nullptr;
+		return static_cast<ComponentStoreType*>(nullptr);
 	}
 
 	/*
-		Erases components belonging to specified entity.
+		Erases components belonging to specified entity using binary search.
 		Returns true if it found any components to erase.
 	*/
-	bool eraseComponents(const Entity& e) override
+	bool eraseComponentOf(const Entity& e) override
 	{
-		for (auto it = componentVector.begin(); it != componentVector.end(); it++)
+		size_t l = 0;
+		size_t r = componentVector.size() - 1;
+
+		while (l <= r)
 		{
-			if (it->entity == e)
+			size_t m = (l + r) / 2;
+
+			if (componentVector.at(m).entity < e)
 			{
-				componentVector.erase(it);
+				l = m + 1;
+			} else if (componentVector.at(m).entity > e)
+			{
+				if (r == 0 || m == 0)			// To avoid underflow
+					return false;
+				r = m - 1;
+			} else
+			{
+				componentVector.erase(componentVector.begin() + m);
 				return true;
 			}
 		}
-		return false;
+		return false;	
 	}
 
-	Entity entityAtIndex(const size_t& index) const override
+	Entity entityAt(const size_t& index) const override
 	{
-		return componentVector.at(index).entity;
+		return componentVector[index].entity;
 	}
+
+	size_t getIdentifier() const override { return componentTypeIdentifier; };
+	static size_t getIdentifierStatic() { return componentTypeIdentifier; };
 
 	size_t size() const override { return componentVector.size(); };
 };
+template <typename ComponentType>
+size_t ComponentManager<ComponentType>::componentTypeIdentifier = Component<ComponentType>::getIdentifierStatic();
