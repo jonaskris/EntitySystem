@@ -176,6 +176,14 @@ public:
 	}
 
 	/*
+		Retrieves vector to componentVector.
+	*/
+	std::vector<ComponentWrapper<ComponentType>>* getComponentVector()
+	{
+		return &componentVector;
+	}
+
+	/*
 		Erases components belonging to specified entity using binary search.
 		Returns true if it found any components to erase.
 	*/

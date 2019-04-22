@@ -59,6 +59,13 @@ int main()
 		componentManagerA->insertComponent(Entity{ 4 }, a);
 		componentManagerA->insertComponent(Entity{ 5 }, a);
 		
+		// Testing getComponentVector
+		std::cout << "\t Testing getComponentVector..." << std::endl;
+		std::vector<ComponentWrapper<ComponentA>>* vecA = static_cast<ComponentManager<ComponentA>*>(componentManagerA)->getComponentVector();
+		std::cout << "\t\t Got component vector from ManagerA, size should be 5, is: " << vecA->size() << std::endl;
+		std::vector<ComponentWrapper<ComponentB>>* vecB = static_cast<ComponentManager<ComponentB>*>(componentManagerB)->getComponentVector();
+		std::cout << "\t\t Got component vector from ManagerB, size should be 2, is: " << vecB->size() << std::endl << std::endl;
+
 		// Testing eraseComponentOf.
 		std::cout << "\t Testing eraseComponentOf..." << std::endl;
 			// Erasing non-existant component below minimum.
@@ -105,6 +112,12 @@ int main()
 		e.newComponent(e4, ComponentB{ false });
 
 		std::cout << "\t\t Size should remain 4, is: " << e.sizeEntities() << std::endl << std::endl;
+
+		std::cout << "\t Testing getComponentVectorByType..." << std::endl;
+		std::vector<ComponentWrapper<ComponentA>>* vecA = e.getComponentVectorByType<ComponentA>();
+		std::cout << "\t\t Got component vector of type ComponentA from EntityManager, size should be 4, is: " << vecA->size() << std::endl;
+		std::vector<ComponentWrapper<ComponentB>>* vecB = e.getComponentVectorByType<ComponentB>();
+		std::cout << "\t\t Got component vector of type ComponentB from EntityManager, size should be 4, is: " << vecB->size() << std::endl << std::endl;
 
 		// Testing each.
 		std::cout << "\t Testing each..." << std::endl;

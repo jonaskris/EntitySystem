@@ -267,6 +267,19 @@ public:
 	};
 
 	/*
+		Retrieves vector to all components by type.
+	*/
+	template <typename ComponentType>
+	std::vector<ComponentWrapper<ComponentType>>* getComponentVectorByType()
+	{
+		for (size_t i = 0; i < componentManagers.size(); i++)
+			if (componentManagers.at(i)->storesComponentType<ComponentType>())
+				return static_cast<ComponentManager<ComponentType>*>(componentManagers.at(i))->getComponentVector();
+		
+		return nullptr;
+	}
+
+	/*
 		Retrieves a pointer to a component.
 	*/
 	template <typename ComponentType>
