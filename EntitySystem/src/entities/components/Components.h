@@ -4,17 +4,18 @@
 /*
 	Component used for testing purposes.
 */
-struct ComponentA : public Component<ComponentA>
+struct ComponentA : public BasicComponent<ComponentA>, ComponentStorageSpecifier<ComponentA>
 {
 	float x, y, z;
 	ComponentA(float x, float y, float z) : x(x), y(y), z(z) {};
 };
+size_t ComponentStorageSpecifier<ComponentA>::initialStorageCapacity = 1024;
 
 /*
 	Component used for testing purposes.
 */
-struct ComponentB : public Component<ComponentB>
+struct ComponentB : public LimitedLifetimeComponent<ComponentB>
 {
 	bool b;
-	explicit ComponentB(bool b) : b(b) {};
+	ComponentB(bool b, const float& lifetime) : LimitedLifetimeComponent(lifetime), b(b) {};
 };

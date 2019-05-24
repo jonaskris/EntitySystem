@@ -10,20 +10,39 @@ class EntityManager;
 class SystemIdentifierCounter
 {
 	template <typename SystemType>
-	friend class System;
+	friend class SystemIdentifier;
 
 	static size_t counter;
 };
 
-class SystemStoreType
+/*
+	Base of every system.
+*/
+class SystemBase
 {
 	friend class EntityManager;
+private:
+	virtual void setEntityManager(EntityManager* entityManager) = 0;
 protected:
-	virtual ~SystemStoreType() { };
+	virtual ~SystemBase() { };
 	virtual void update(const double& dt) = 0;
 public:
 	virtual size_t getIdentifier() const = 0;
 };
+
+/*
+	Identifies a system with a unique identifier.
+*/
+template <typename SystemType>
+class SystemIdentifier 
+{
+	static size_t systemTypeIdentifier;
+public:
+	static size_t getIdentifierStatic() { return systemTypeIdentifier; }
+
+};
+template <typename SystemType>
+size_t SystemIdentifier<SystemType>::systemTypeIdentifier = SystemIdentifierCounter::counter++;
 
 /*
 	Base class of systems.
@@ -31,23 +50,20 @@ public:
 	Can only be instantiated through EntityManager's registerSystem.
 */
 template <typename SystemType>
-class System : public SystemStoreType
+class System : public SystemBase, SystemIdentifier<SystemType>
 {
 	friend class EntityManager;
-
-	static size_t systemTypeIdentifier;
 protected:
 	virtual ~System() { };
-	EntityManager* entityManager;
-	explicit System(EntityManager* entityManager) : entityManager(entityManager) { };
+	EntityManager* entityManager = nullptr;
+	explicit System() { };
 
 	/*
-		Called on every EntityManager.update for each set of entities that have the components specified in definition.
+		Called on every EntityManager.update for each set of entities that have the components specified in overridden update method.
 	*/
 	virtual void update(const double& dt) override = 0;
+
+	void setEntityManager(EntityManager* entityManager) { this->entityManager = entityManager; };
 public:
-	virtual size_t getIdentifier() const override { return systemTypeIdentifier; }
-	static size_t getIdentifierStatic() { return systemTypeIdentifier; }
+	virtual size_t getIdentifier() const override { return SystemIdentifier<SystemType>::getIdentifierStatic(); }
 };
-template <typename SystemType>
-size_t System<SystemType>::systemTypeIdentifier = SystemIdentifierCounter::counter++;

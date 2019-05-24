@@ -2,7 +2,7 @@
 #include "../Entity.h"
 
 class ComponentManagerBase;
-struct ComponentStoreType;
+struct ComponentBase;
 
 /*
 	A generic iterator for use with ComponentManager.
@@ -15,7 +15,7 @@ private:
 	size_t index = 0;
 	ComponentManagerBase* componentManager;
 
-	ComponentManagerIterator(const size_t& index, ComponentManagerBase* componentManager) : componentManager(componentManager), index(index) { };
+	ComponentManagerIterator(const size_t& index, ComponentManagerBase* componentManager) : componentManager(componentManager), index(index) {};
 public:
 
 	/* 
@@ -28,15 +28,12 @@ public:
 	*/
 	bool decrement();
 
-	/*
-		Gets the entity associated with component at current index.
-	*/
-	Entity getCurrentEntity() const;
-
 	/* 
 		Gets the component at current index.
 	*/
-	ComponentStoreType* getCurrentComponent() const;
+	ComponentBase* getCurrentComponent() const;
+
+	size_t getComponentManagerSize() const;
 
 	/* 
 		For sorting iterators by size of the componentmanager.

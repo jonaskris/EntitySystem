@@ -2,6 +2,7 @@
 #include <chrono>
 #include <functional>
 #include "entities/components/Components.h"
+#include "entities/components/Component.h"
 #include "entities/components/ComponentManager.h"
 #include "entities/components/ComponentManagerIterator.h"
 #include "entities/EntityManager.h"
@@ -9,7 +10,7 @@
 #include "systems/System.h"
 #include "systems/Systems.h"
 
-#define RUN_FUNCTION_TEST true
+#define RUN_FUNCTION_TEST false
 #define RUN_MEMORY_LEAK_TEST false
 #define RUN_PERFORMANCE_TEST false
 
@@ -18,75 +19,6 @@ int main()
 {
 #if RUN_FUNCTION_TEST
 {
-	{
-		ComponentA a{ 0.0f, 1.0f, 2.0f };
-		ComponentB b{ false };
-
-		ComponentManagerBase* componentManagerA = new ComponentManager<ComponentA>();
-		ComponentManagerBase* componentManagerB = new ComponentManager<ComponentB>();
-
-	// Testing ComponentManager.
-		std::cout << "Testing ComponentManager..." << std::endl;
-		// Testing insertComponent and size.
-		componentManagerA->insertComponent(Entity{ 1 }, a);
-		componentManagerA->insertComponent(Entity{ 2 }, b); // Fails as type check comes out as false
-		componentManagerA->insertComponent(Entity{ 3 }, a);
-		componentManagerA->insertComponent(Entity{ 4 }, b); // Fails as type check comes out as false
-
-		componentManagerB->insertComponent(Entity{ 1 }, b);
-		componentManagerB->insertComponent(Entity{ 2 }, a); // Fails as type check comes out as false
-		componentManagerB->insertComponent(Entity{ 3 }, b);
-		componentManagerB->insertComponent(Entity{ 4 }, a); // Fails as type check comes out as false
-
-		std::cout << "\t Testing insertComponent and size..." << std::endl;
-		std::cout << "\t\t Size of manager A, should be 2, is: " << componentManagerA->size() << std::endl;
-		std::cout << "\t\t Size of manager B, should be 2, is: " << componentManagerB->size() << std::endl << std::endl;
-
-		// Testing storesComponentType.
-		std::cout << "\t Testing storesComponentType...." << std::endl;
-		std::cout << "\t\t Manager a storesComponentType A, should be True, is: " << (componentManagerA->storesComponentType<ComponentA>() ? ("True") : ("False")) << std::endl;
-		std::cout << "\t\t Manager a storesComponentType B, should be False, is: " << (componentManagerA->storesComponentType<ComponentB>() ? ("True") : ("False")) << std::endl;
-		std::cout << "\t\t Manager b storesComponentType B, should be True, is: " << (componentManagerB->storesComponentType<ComponentB>() ? ("True") : ("False")) << std::endl;
-		std::cout << "\t\t Manager b storesComponentType A, should be False, is: " << (componentManagerB->storesComponentType<ComponentA>() ? ("True") : ("False")) << std::endl << std::endl;
-		
-		// Testing getIdentifier.
-		std::cout << "\t Testing getIdentifier..." << std::endl;
-		std::cout << "\t\t ManagerA getIdentifier, should be 1, is: " << componentManagerA->getIdentifier() << std::endl;
-		std::cout << "\t\t ManagerB getIdentifier, should be 2, is: " << componentManagerB->getIdentifier() << std::endl << std::endl;
-		
-		// Adding more components.
-		componentManagerA->insertComponent(Entity{ 2 }, a);
-		componentManagerA->insertComponent(Entity{ 4 }, a);
-		componentManagerA->insertComponent(Entity{ 5 }, a);
-		
-		// Testing getComponentVector
-		std::cout << "\t Testing getComponentVector..." << std::endl;
-		std::vector<ComponentWrapper<ComponentA>>* vecA = static_cast<ComponentManager<ComponentA>*>(componentManagerA)->getComponentVector();
-		std::cout << "\t\t Got component vector from ManagerA, size should be 5, is: " << vecA->size() << std::endl;
-		std::vector<ComponentWrapper<ComponentB>>* vecB = static_cast<ComponentManager<ComponentB>*>(componentManagerB)->getComponentVector();
-		std::cout << "\t\t Got component vector from ManagerB, size should be 2, is: " << vecB->size() << std::endl << std::endl;
-
-		// Testing eraseComponentOf.
-		std::cout << "\t Testing eraseComponentOf..." << std::endl;
-			// Erasing non-existant component below minimum.
-		bool erased1 = componentManagerA->eraseComponentOf(Entity{0});
-		std::cout << "\t\t Tried erasing non-existant component below minimum, size should be 5, is: " << componentManagerA->size() << ", \n\t\t\treturn value should be False, is: " << ((erased1) ? ("True") : ("False")) << std::endl;
-			// Erasing non-existant component above minimum.
-		bool erased2 = componentManagerA->eraseComponentOf(Entity{6});
-		std::cout << "\t\t Tried erasing non-existant component above minimum, size should be 5, is: " << componentManagerA->size() << ", \n\t\t\treturn value should be False, is: " << ((erased2) ? ("True") : ("False")) << std::endl;
-			// Erasing existant component at minimum.
-		bool erased3 = componentManagerA->eraseComponentOf(Entity{1});
-		std::cout << "\t\t Tried erasing existing component at minimum, size should be 4, is: " << componentManagerA->size() << ", \n\t\t\treturn value should be True, is: " << ((erased3) ? ("True") : ("False")) << std::endl;
-			// Erasing existant component at maximum.
-		bool erased4 = componentManagerA->eraseComponentOf(Entity{5});
-		std::cout << "\t\t Tried erasing existing component at maximum, size should be 3, is: " << componentManagerA->size() << ", \n\t\t\treturn value should be True, is: " << ((erased4) ? ("True") : ("False")) << std::endl;
-			// Erasing existant component somewhere in middle.
-		bool erased5 = componentManagerA->eraseComponentOf(Entity{4});
-		std::cout << "\t\t Tried erasing existing component at maximum, size should be 2, is: " << componentManagerA->size() << ", \n\t\t\treturn value should be True, is: " << ((erased5) ? ("True") : ("False")) << std::endl;
-
-		delete componentManagerA;
-		delete componentManagerB;
-	}
 	// Testing EntityManager...
 	std::cout << "Testing EntityManager..." << std::endl;
 	{
@@ -94,8 +26,8 @@ int main()
 		std::cout << "\t Testing newEntity(components) and sizeEntities..." << std::endl;
 
 		EntityManager e;
-		Entity e1 = e.newEntity(ComponentA{ 1.1f, 1.2f, 1.3f }, ComponentB{ true });
-		Entity e2 = e.newEntity(ComponentA{ 2.1f, 2.2f, 2.3f }, ComponentB{ false });
+		Entity e1 = e.newEntity(ComponentA{ 1.1f, 1.2f, 1.3f }, ComponentB{ true, 10.0f });
+		Entity e2 = e.newEntity(ComponentA{ 2.1f, 2.2f, 2.3f }, ComponentB{ false, 10.0f });
 		std::cout << "\t\t Size should be 2, is: " << e.sizeEntities() << std::endl << std::endl;
 
 		// Testing newEntity(void).
@@ -107,16 +39,16 @@ int main()
 		// Testing newComponent and sizeEntities.
 		std::cout << "\t Testing newComponent and sizeEntities..." << std::endl;
 		e.newComponent(e3, ComponentA{ 3.1f, 3.2f, 3.3f });
-		e.newComponent(e3, ComponentB{ true });
+		e.newComponent(e3, ComponentB{ true, 10.0f });
 		e.newComponent(e4, ComponentA{ 4.1f, 4.2f, 4.3f });
-		e.newComponent(e4, ComponentB{ false });
+		e.newComponent(e4, ComponentB{ false, 10.0f });
 
 		std::cout << "\t\t Size should remain 4, is: " << e.sizeEntities() << std::endl << std::endl;
 
 		std::cout << "\t Testing getComponentVectorByType..." << std::endl;
-		std::vector<ComponentWrapper<ComponentA>>* vecA = e.getComponentVectorByType<ComponentA>();
+		std::vector<ComponentA>* vecA = e.getComponentVectorByType<ComponentA>();
 		std::cout << "\t\t Got component vector of type ComponentA from EntityManager, size should be 4, is: " << vecA->size() << std::endl;
-		std::vector<ComponentWrapper<ComponentB>>* vecB = e.getComponentVectorByType<ComponentB>();
+		std::vector<ComponentB>* vecB = e.getComponentVectorByType<ComponentB>();
 		std::cout << "\t\t Got component vector of type ComponentB from EntityManager, size should be 4, is: " << vecB->size() << std::endl << std::endl;
 
 		// Testing each.
@@ -124,7 +56,7 @@ int main()
 
 		// Increments x, y and z in ComponentA if boolean in ComponentB is true.
 		e.each<ComponentA, ComponentB>(
-			[&](std::vector<ComponentStoreType*> components) -> void
+			[&](std::vector<ComponentBase*> components) -> void
 		{
 			ComponentA* a = static_cast<ComponentA*>(components.at(0));
 			ComponentB* b = static_cast<ComponentB*>(components.at(1));
@@ -186,7 +118,7 @@ int main()
 		e4b = e.getComponentFromEntity<ComponentB>(e4);
 		std::cout << e4a->x << ", " << e4a->y << ", " << e4a->z << ", \n\t\t\tComponentB should have value 0, has: " << e4b->b << std::endl << std::endl;
 
-		Entity e5 = e.newEntity(ComponentB{ true });
+		Entity e5 = e.newEntity(ComponentB{ true, 1.0f });
 		Entity e6 = e.newEntity(ComponentA{ 1.0f, 2.0f, 3.0f });
 
 		std::cout << "\t Testing eraseEntity and sizeComponentManager" << std::endl; 
@@ -255,7 +187,92 @@ system("PAUSE"); // Snapshot and compare Allocations with last snapshot. (Diff) 
  }
 #endif
 
+{
 
 
+
+	// Tests
+		// Component
+	std::cout << "Component tests..." << std::endl;
+			// Identifiers should be unique
+	std::cout << "\tComponentA identifier should be 1, is: " << ComponentTypeIdentifier<ComponentA>::getIdentifierStatic() << std::endl;
+	std::cout << "\tComponentB identifier should be 2, is: " << ComponentTypeIdentifier<ComponentB>::getIdentifierStatic() << std::endl;
+			// Initial storage capacity should be correct
+	std::cout << "\tComponentA initialStorageCapacity should be 1024, is: " << ComponentA::getInitialStorageCapacity() << std::endl << std::endl;
+		// System
+	std::cout << "System tests..." << std::endl;
+			// Identifiers should be unique
+	std::cout << "\tSystem_Example identifier should be 1, is: " << SystemIdentifier<System_Example>::getIdentifierStatic() << std::endl;
+	std::cout << "\tSystem_Test identifier should be 2, is: " << SystemIdentifier<System_Test>::getIdentifierStatic() << std::endl << std::endl;
+		// EntityManager
+	{
+		std::cout << "EntityManager tests..." << std::endl;
+		EntityManager em;
+		// System
+			// SystemsSize
+		std::cout << "\tSystemSize before registering system should be 0, is: " << em.sizeSystems() << std::endl;
+		em.registerSystem(new System_Example());
+		std::cout << "\tSystemSize after registering system should be 1, is: " << em.sizeSystems() << std::endl;
+			// ComponentManager
+				// ComponentManagersSize
+					// Check that size changes appropriately with adding new components 
+		std::cout << "\tSizeComponentManagers before creating any entity or component should be 0, is: " << em.sizeComponentManagers() << std::endl;
+		em.newEntity(ComponentA{ 1.0f, 2.0f, 3.0f });
+						// Should increase when a component is added which type is not added before
+		std::cout << "\tSizeComponentManagers after creating an entity with one component should be 1, is: " << em.sizeComponentManagers() << std::endl;
+		em.newEntity(ComponentB{ false, 10.0f });
+		std::cout << "\tSizeComponentManagers after creating an entity with another component should be 2, is: " << em.sizeComponentManagers() << std::endl;
+						// Should NOT increase when a component is added which type IS added before
+		em.newEntity(ComponentB{ false, 15.0f });
+		std::cout << "\tSizeComponentManagers after creating an entity of already added type should remain 2, is: " << em.sizeComponentManagers() << std::endl;
+				// getComponentVectorByType
+		std::cout << "\tGetComponentVectorByType<ComponentA> should return a vector of size 1, is: " << em.sizeComponentManager<ComponentA>() << std::endl;
+		std::cout << "\tGetComponentVectorByType<ComponentB> should return a vector of size 2, is: " << em.sizeComponentManager<ComponentB>() << std::endl;
+			// DisableEntity
+				// Appropriate components should be erased at the end of update
+		em.update(9.0f);
+		std::cout << "\tLimitedLifetimeComponent should not be erased if not enough time has elapsed, SizeComponentManager<ComponentB> should remain 2, is: " << em.sizeComponentManager<ComponentB>() << std::endl;
+		em.update(1.0f);
+		std::cout << "\tLimitedLifetimeComponent should be erased if enough time has elapsed, SizeComponentManager<ComponentB> should be 1, is: " << em.sizeComponentManager<ComponentB>() << std::endl;
+		em.update(6.0f);
+		std::cout << "\tLimitedLifetimeComponent should be erased if enough time has elapsed, SizeComponentManager<ComponentB> should be 0, is: " << em.sizeComponentManager<ComponentB>() << std::endl;
+
+		std::cout << "\tSizeComponentManager of BasicComponent ComponentA before disabling a component should be 1, is: " << em.sizeComponentManager<ComponentA>() << std::endl;
+		em.disableComponentsOf(Entity{ 1 });
+		std::cout << "\tSizeComponentManager of BasicComponent ComponentA AFTER disabling AND BEFORE UPDATING component should remain 1, is: " << em.sizeComponentManager<ComponentA>() << std::endl;
+		em.update(0.0f);
+		std::cout << "\tSizeComponentManager of BasicComponent ComponentA AFTER disabling AND AFTER UPDATING component should be 0, is: " << em.sizeComponentManager<ComponentA>() << std::endl << std::endl;
+	}
+			// Update
+	{
+		EntityManager em;
+		em.registerSystem(new System_Example());
+		em.newEntity(ComponentA{ 0.0f, 1.0f, 2.0f }, ComponentB{ true, 8.0f});
+		em.newEntity(ComponentA{ 3.0f, 4.0f, 5.0f }, ComponentB{ false, 10.0f});
+		em.newEntity(ComponentA{ 6.0f, 7.0f, 8.0f });
+		em.newEntity(ComponentA{ 6.0f, 7.0f, 8.0f });
+		em.newEntity(ComponentA{ 6.0f, 7.0f, 8.0f });
+
+		std::cout << "\tBefore update, EntityManager ComponentManagerA/ComponentManagerB should contain components with values: " << std::endl;
+		std::cout << "\tComponentA{ 0, 1, 2, false }, ComponentA{ 3, 4, 5, false }, ComponentA{ 6, 7, 8, false }" << std::endl;
+		std::cout << "\tComponentB{ true, 8 }, ComponentB{ false, 10 }" << std::endl;
+		std::cout << "\tContains: " << std::endl;
+		std::vector<ComponentA>* aVec = em.getComponentVectorByType<ComponentA>();
+		std::vector<ComponentB>* bVec = em.getComponentVectorByType<ComponentB>();
+		std::cout << "\tComponentA{ " << aVec->at(0).x << ", " << aVec->at(0).y << ", " << aVec->at(0).z << ", " << ((aVec->at(0).getDisabled()) ? ("true") : ("false")) << " }" << ", ComponentA{ " << aVec->at(1).x << ", " << aVec->at(1).y << ", " << aVec->at(1).z << ", " << ((aVec->at(1).getDisabled()) ? ("true") : ("false")) << " }" << ", ComponentA{ " << aVec->at(2).x << ", " << aVec->at(2).y << ", " << aVec->at(2).z << ", " << ((aVec->at(2).getDisabled()) ? ("true") : ("false")) << " }" << std::endl;
+		std::cout << "\tComponentB{ " << ((bVec->at(0).b)?("true"):("false")) << ", " << bVec->at(0).lifetime  << " }" << ", ComponentB{ " << ((bVec->at(1).b) ? ("true") : ("false")) << ", " << bVec->at(1).lifetime << " }" << std::endl;
+		
+		em.update(1.0f);
+
+		std::cout << "\tAfter update, EntityManager ComponentManagerA/ComponentManagerB should contain components with values: " << std::endl;
+		std::cout << "\tComponentA{ 1, 2, 3, false }, ComponentA{ 3, 4, 5, false }, ComponentA{ 6, 7, 8, false }" << std::endl;
+		std::cout << "\tComponentB{ true, 7 }, ComponentB{ false, 9 }" << std::endl;
+		std::cout << "\tContains: " << std::endl;
+		aVec = em.getComponentVectorByType<ComponentA>();
+		bVec = em.getComponentVectorByType<ComponentB>();
+		std::cout << "\tComponentA{ " << aVec->at(0).x << ", " << aVec->at(0).y << ", " << aVec->at(0).z << ", " << ((aVec->at(0).getDisabled()) ? ("true") : ("false")) << " }" << ", ComponentA{ " << aVec->at(1).x << ", " << aVec->at(1).y << ", " << aVec->at(1).z << ", " << ((aVec->at(1).getDisabled()) ? ("true") : ("false")) << " }" << ", ComponentA{ " << aVec->at(2).x << ", " << aVec->at(2).y << ", " << aVec->at(2).z << ", " << ((aVec->at(2).getDisabled()) ? ("true") : ("false")) << " }" << std::endl;
+		std::cout << "\tComponentB{ " << ((bVec->at(0).b) ? ("true") : ("false")) << ", " << bVec->at(0).lifetime << " }" << ", ComponentB{ " << ((bVec->at(1).b) ? ("true") : ("false")) << ", " << bVec->at(1).lifetime << " }" << std::endl;
+	}
+}
 system("PAUSE");
 }

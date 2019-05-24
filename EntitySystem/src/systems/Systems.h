@@ -1,6 +1,5 @@
 #pragma once
 #include "System.h"
-#include "../entities/components/Components.h"
 
 class EntityManager;
 
@@ -9,20 +8,17 @@ class EntityManager;
 */
 class System_Example : public System<System_Example>
 {
-/* 
-	All access should be private, and friend class should be EntityManager.
-*/
-private:
 	friend class EntityManager;
-	explicit System_Example(EntityManager* entityManager) : System(entityManager) { };
-
+public:
+	explicit System_Example() {};
+private:
 	/*
 		Update is called on every update of entitymanager, as long as it is registered in the entitymanager.
 	*/
 	void update(const double& dt) override
 	{
-		static std::function updateLambda =
-			[&](std::vector<ComponentStoreType*> & components)
+		std::function updateLambda =
+			[&](std::vector<ComponentBase*> & components)
 		{
 			ComponentA* a = static_cast<ComponentA*>(components.at(0));
 			ComponentB* b = static_cast<ComponentB*>(components.at(1));
@@ -41,5 +37,20 @@ private:
 			other variables of the systems internal state.
 		*/
 		entityManager->each<ComponentA, ComponentB>(updateLambda);
+	}
+};
+
+/*
+	To test unique identifiers.
+*/
+class System_Test : public System<System_Test>
+{
+	friend class EntityManager;
+public:
+	explicit System_Test() {};
+private:
+	void update(const double& dt) override
+	{
+
 	}
 };

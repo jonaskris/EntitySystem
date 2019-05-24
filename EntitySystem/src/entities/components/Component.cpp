@@ -3,4 +3,4 @@
 /* 
 	Initialize global variable.
 */
-size_t ComponentIdentifierCounter::counter = 1;
+size_t ComponentTypeIdentifierCounter::counter = 1;
