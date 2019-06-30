@@ -122,7 +122,6 @@
     <ClCompile Include="src\entities\components\Component.cpp" />
     <ClCompile Include="src\entities\components\ComponentManagerIterator.cpp" />
     <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="src\systems\System.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\entities\components\Components.h" />

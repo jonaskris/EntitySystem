@@ -111,15 +111,19 @@ public:
 	};
 
 	/*
-		Executes a lambda on every entity that has specified set of component types.
+		Executes a System.updateEntity on every entity that has specified set of component types.
 	*/
-	template <typename... ComponentTypes>
-	void each(std::function<void(std::vector<ComponentBase*>&)> lambda)
+	void each(const double& dt, SystemBase* system, std::vector<size_t>& componentIdentifiers)
 	{
-		static_assert(sizeof...(ComponentTypes) > 0, "Cannot iterate over no components! Specify set of component types to iterate over in template argument.");
+		if (componentIdentifiers.size() == 0)
+			return;
 
 		// Get each relevant ComponentManager and create an iterator for it.
-		std::vector<ComponentManagerIterator> componentManagerIterators = unpackAndGetComponentManagersIterators<ComponentTypes...>();
+		std::vector<ComponentManagerIterator> componentManagerIterators;
+		for (size_t i = 0; i < componentIdentifiers.size(); i++)
+			for (size_t j = 0; j < this->componentManagers.size(); j++)
+				if (componentIdentifiers[i] == this->componentManagers[j]->getIdentifier())
+					componentManagerIterators.push_back(this->componentManagers[j]->begin());
 
 		// Check that the ComponentManagers the ComponentManagerIterators point to are not empty
 		for (size_t i = 0; i < componentManagerIterators.size(); i++)
@@ -127,7 +131,7 @@ public:
 				return;
 
 		// Check if iterator/manager was found for each of ComponentTypes, if not, return.
-		if (sizeof...(ComponentTypes) != componentManagerIterators.size())
+		if (componentIdentifiers.size() != componentManagerIterators.size())
 			return;
 
 		// Since unpacking iterators results in reversed order, it must be reversed again to get original order.
@@ -166,7 +170,7 @@ public:
 				std::vector<ComponentBase*> components;
 				for (size_t i = 0; i < componentManagerIterators.size(); i++)
 					components.push_back(componentManagerIterators.at(i).getCurrentComponent());
-				lambda(components);
+				system->updateEntity(dt, components);
 			}
 
 		incrementFirst:;
@@ -258,13 +262,7 @@ public:
 	bool registerSystem(SystemType* system)
 	{
 		static_assert(std::is_base_of<SystemBase, SystemType>::value, "SystemType must be derived from SystemBase!");
-
-		// Check if a system of SystemType is already registered.
-		for (size_t i = 0; i < systems.size(); i++)
-			if (systems.at(i)->getIdentifier() == SystemIdentifier<SystemType>::getIdentifierStatic())
-				return false;
 		
-		//SystemType 
 		systems.push_back(system);
 		systems.back()->setEntityManager(this);
 		return true;
@@ -317,19 +315,4 @@ public:
 
 	size_t sizeComponentManagers() const { return componentManagers.size(); };
 	size_t sizeSystems() const { return systems.size(); };
-
-	/*
-		Retrieves a pointer to a component.
-	*/
-	//template <typename ComponentType>
-	//ComponentType* getComponentFromEntity(const Entity& entity)
-	//{
-	//	static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
-	//
-	//	for (size_t i = 0; i < componentManagers.size(); i++)
-	//		if (componentManagers.at(i)->storesComponentType<ComponentType>())
-	//			return static_cast<ComponentType*>(componentManagers.at(i)->getComponentFromEntity(entity));
-	//
-	//	return static_cast<ComponentType*>(nullptr);
-	//}
 };

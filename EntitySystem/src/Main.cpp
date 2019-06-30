@@ -199,11 +199,6 @@ system("PAUSE"); // Snapshot and compare Allocations with last snapshot. (Diff) 
 	std::cout << "\tComponentB identifier should be 2, is: " << ComponentTypeIdentifier<ComponentB>::getIdentifierStatic() << std::endl;
 			// Initial storage capacity should be correct
 	std::cout << "\tComponentA initialStorageCapacity should be 1024, is: " << ComponentA::getInitialStorageCapacity() << std::endl << std::endl;
-		// System
-	std::cout << "System tests..." << std::endl;
-			// Identifiers should be unique
-	std::cout << "\tSystem_Example identifier should be 1, is: " << SystemIdentifier<System_Example>::getIdentifierStatic() << std::endl;
-	std::cout << "\tSystem_Test identifier should be 2, is: " << SystemIdentifier<System_Test>::getIdentifierStatic() << std::endl << std::endl;
 		// EntityManager
 	{
 		std::cout << "EntityManager tests..." << std::endl;
