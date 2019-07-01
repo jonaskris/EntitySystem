@@ -79,7 +79,7 @@ class ComponentTypeIdentifierCounter
 	template <typename ComponentType>
 	friend struct ComponentTypeIdentifier;
 
-	static size_t counter;
+	static inline size_t counter = 1;
 };
 
 /*
@@ -92,10 +92,14 @@ private:
 	static size_t identifier;
 	static bool isLimitedLifetimeComponent;
 public:
-	static size_t getIdentifierStatic() { return identifier; };
+	static size_t getIdentifierStatic() {
+		if (identifier == 0)
+			identifier = ComponentTypeIdentifierCounter::counter++;
+		return identifier;
+	};
 	static bool getIsLimitedLifetimeComponentStatic() { return isLimitedLifetimeComponent; };
 };
 template <typename ComponentType>
-size_t ComponentTypeIdentifier<ComponentType>::identifier = ComponentTypeIdentifierCounter::counter++;
+size_t ComponentTypeIdentifier<ComponentType>::identifier = 0;
 template <typename ComponentType>
-bool ComponentTypeIdentifier<ComponentType>::isLimitedLifetimeComponent = std::is_base_of<LimitedLifetimeComponent<ComponentType>, ComponentType>::value;
+bool ComponentTypeIdentifier<ComponentType>::isLimitedLifetimeComponent = std::is_base_of < LimitedLifetimeComponent<ComponentType>, er<ComponentType>::isLimitedLifetimeComponent = std::is_base_of<LimitedLifetimeComponent<ComponentType>, ComponentType>::value;

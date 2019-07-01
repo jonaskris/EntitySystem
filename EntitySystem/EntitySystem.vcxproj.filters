@@ -21,9 +21,6 @@
     <ClCompile Include="src\entities\components\ComponentManagerIterator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\entities\components\Component.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\entities\components\Component.h">
