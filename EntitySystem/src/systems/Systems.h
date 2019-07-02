@@ -24,10 +24,10 @@ private:
 		updateEntities(dt);
 	}
 
-	void updateEntity(const double& dt, std::vector<ComponentBase*>& components) override
+	void updateEntity(const double& dt, ComponentGroup& components) override
 	{
-		ComponentA* a = static_cast<ComponentA*>(components.at(0));
-		ComponentB* b = static_cast<ComponentB*>(components.at(1));
+		ComponentA* a = components.get<ComponentA>();
+		ComponentB* b = components.get<ComponentB>();
 
 		if (b->b)
 		{
@@ -52,7 +52,7 @@ private:
 
 	}
 
-	void updateEntity(const double& dt, std::vector<ComponentBase*>& components) override
+	void updateEntity(const double& dt, ComponentGroup& components) override
 	{
 
 	}

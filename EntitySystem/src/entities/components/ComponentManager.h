@@ -20,7 +20,7 @@ class ComponentManagerBase
 	/* 
 		A virtual helper method to insert component into derived classes vector.
 	*/
-	virtual void insertComponentVirtual(ComponentBase const* component) = 0;
+	virtual void addToInsertionQueue(ComponentBase const* component) = 0;
 
 	/*
 		A virtual helper method that checks if the derived class stores a components assigned id.
@@ -32,6 +32,11 @@ public:
 		Insures proper destruction of derived class.
 	*/
 	virtual ~ComponentManagerBase() {};
+
+	/*
+		To be called between updating systems. Avoids iterator invalidation.
+	*/
+	virtual void fillComponentVectorFromInsertionQueue() = 0;
 
 	/*
 		Gets pointer to component at specified index.
@@ -52,7 +57,7 @@ public:
 
 		if (!storesComponentType<ComponentType>())
 			return false;
-		insertComponentVirtual(&component);
+		addToInsertionQueue(&component);
 		return true;
 	};
 
@@ -81,7 +86,7 @@ public:
 	bool storesComponentType() {
 		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
 
-		return storesTypeId(ComponentTypeIdentifier<ComponentType>::getIdentifierStatic());
+		return storesTypeId(ComponentType::getIdentifier());
 	};
 
 	/*
@@ -99,29 +104,45 @@ class ComponentManager : public ComponentManagerBase
 
 	friend class ComponentManagerIterator;
 
+	std::vector<ComponentType> insertionQueue; // To avoid invalidating componentVector iterators during system updates.
 	std::vector<ComponentType> componentVector;
 
-	/* 
+	/*
 		Inserts sorted, beginning from the back of the array.
 	*/
-	void insertComponentVirtual(ComponentBase const* component) override
+	void insertComponentVectorSorted(const ComponentType& component)
 	{
 		for (auto it = componentVector.rbegin(); it != componentVector.rend(); it++)
 		{
-			if (component->getEntity() > (*it).getEntity())
+			if (component.getEntity() > (*it).getEntity())
 			{
-				componentVector.insert(it.base(), *((ComponentType*)component));
+				componentVector.insert(it.base(), component);
 				return;
 			}
 		}
-		componentVector.push_back(*((ComponentType*)component));
+		componentVector.push_back(component);
+	}
+
+	void fillComponentVectorFromInsertionQueue()
+	{
+		for (size_t i = 0; i < insertionQueue.size(); i++)
+		{
+			insertComponentVectorSorted(insertionQueue.at(i));
+		}
+
+		insertionQueue.clear();
+	}
+
+	void addToInsertionQueue(ComponentBase const* component) override
+	{
+		insertionQueue.push_back(*((ComponentType*)component));
 	}
 
 	/*
 		Checks that the component manager stores component with specified identifier.
 		Components are assigned id from ComponentTypeIdentifier.
 	*/
-	bool storesTypeId(const size_t& id) const override { return ComponentTypeIdentifier<ComponentType>::getIdentifierStatic() == id; };
+	bool storesTypeId(const size_t& id) const override { return ComponentType::getIdentifier() == id; };
 public:
 
 	ComponentManager()
@@ -182,36 +203,6 @@ public:
 		return &componentVector;
 	}
 
-	/*
-		Erases components belonging to specified entity using binary search.
-		Returns true if it found any components to erase.
-	*/
-	//bool eraseComponentOf(const Entity& e) override
-	//{
-	//	if (componentVector.size() == 0)
-	//		return;
-	//	size_t l = 0;
-	//	size_t r = componentVector.size() - 1;
-	//
-	//	while (l <= r)
-	//	{
-	//		size_t m = (l + r) / 2;
-	//
-	//		if (componentVector.at(m).getEntity() < e)
-	//		{
-	//			l = m + 1;
-	//		} else if (componentVector.at(m).getEntity() > e) {
-	//			if (r == 0 || m == 0)			// To avoid underflow
-	//				return false;
-	//			r = m - 1;
-	//		} else {
-	//			componentVector.erase(componentVector.begin() + m);
-	//			return true;
-	//		}
-	//	}
-	//	return false;	
-	//}
-
 	void disableComponentOf(const Entity& entity) override
 	{
 		if (componentVector.size() == 0)
@@ -243,7 +234,6 @@ public:
 		}
 	}
 
-
 	void eraseDisabledComponents() override
 	{
 		componentVector.erase(std::remove_if(componentVector.begin(), componentVector.end(), [](const ComponentType& component) { return component.getDisabled(); }), componentVector.end());
@@ -257,7 +247,7 @@ public:
 	}
 
 
-	size_t getIdentifier() const override { return ComponentTypeIdentifier<ComponentType>::getIdentifierStatic(); };
+	size_t getIdentifier() const override { return ComponentType::getIdentifier(); };
 
 	size_t size() const override { return componentVector.size(); };
 };

@@ -47,5 +47,8 @@
     <ClInclude Include="src\entities\components\Components.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\entities\components\ComponentGroup.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

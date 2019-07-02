@@ -2,6 +2,8 @@
 #include <vector>
 #include <functional>
 #include "../entities/components/Component.h"
+#include "../entities/components/ComponentGroup.h"
+
 
 class EntityManager;
 
@@ -16,7 +18,7 @@ private:
 protected:
 	virtual ~SystemBase() { };
 	virtual void update(const double& dt) = 0;
-	virtual void updateEntity(const double& dt, std::vector<ComponentBase*>& components) = 0;
+	virtual void updateEntity(const double& dt, ComponentGroup& components) = 0;
 public:
 };
 
@@ -42,7 +44,7 @@ class System : public SystemBase
 	{
 		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
 
-		componentIdentifiersUnpacking.push_back(ComponentType::getIdentifierStatic());
+		componentIdentifiersUnpacking.push_back(ComponentType::getIdentifier());
 	}
 
 	/*
@@ -53,7 +55,7 @@ class System : public SystemBase
 	{
 		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
 
-		componentIdentifiersUnpacking.push_back(ComponentType::getIdentifierStatic());
+		componentIdentifiersUnpacking.push_back(ComponentType::getIdentifier());
 		unpackComponentTypesHelper<F, Rest...>(componentIdentifiersUnpacking);
 	}
 
@@ -67,18 +69,13 @@ class System : public SystemBase
 		return componentIdentifiersUnpacking;
 	}
 
-	EntityManager* entityManager = nullptr;
+
+	void setEntityManager(EntityManager* entityManager) { this->entityManager = entityManager; };
 protected:
 	virtual ~System() { };
 	System() { };
 
-	/*
-		To be called by System.Update by each specific type of System whenever needed.
-	*/
-	void updateEntities(const double& dt)
-	{
-		entityManager->each(dt, this, componentIdentifiers);
-	}
+	EntityManager* entityManager = nullptr;
 
 	/*
 		Called on every EntityManager.update once every update before updating individual entities.
@@ -88,9 +85,15 @@ protected:
 	/*
 		Called on every EntityManager.update for each set of entities that have the components specified in overridden update method.
 	*/
-	virtual void updateEntity(const double& dt, std::vector<ComponentBase*>& components) = 0;
+	virtual void updateEntity(const double& dt, ComponentGroup& components) = 0;
 
-	void setEntityManager(EntityManager* entityManager) { this->entityManager = entityManager; };
+	/*
+		To be called by System.Update by each specific type of System whenever needed.
+	*/
+	void updateEntities(const double& dt)
+	{
+		entityManager->each(dt, this, componentIdentifiers);
+	}
 };
 template <typename... ComponentTypes>
 std::vector<size_t> System<ComponentTypes...>::componentIdentifiers = System<ComponentTypes...>::unpackComponentTypes();

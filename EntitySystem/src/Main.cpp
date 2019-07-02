@@ -195,8 +195,9 @@ system("PAUSE"); // Snapshot and compare Allocations with last snapshot. (Diff) 
 		// Component
 	std::cout << "Component tests..." << std::endl;
 			// Identifiers should be unique
-	std::cout << "\tComponentA identifier should be 1, is: " << ComponentTypeIdentifier<ComponentA>::getIdentifierStatic() << std::endl;
-	std::cout << "\tComponentB identifier should be 2, is: " << ComponentTypeIdentifier<ComponentB>::getIdentifierStatic() << std::endl;
+	std::cout << "\tComponentA identifier should not be the same as ComponentB identifier:" << std::endl;
+	std::cout << "\t\tComponentA identifier is: " << ComponentA::getIdentifier() << std::endl;
+	std::cout << "\t\tComponentB identifier is: " << ComponentB::getIdentifier() << std::endl;
 			// Initial storage capacity should be correct
 	std::cout << "\tComponentA initialStorageCapacity should be 1024, is: " << ComponentA::getInitialStorageCapacity() << std::endl << std::endl;
 		// EntityManager
@@ -211,14 +212,20 @@ system("PAUSE"); // Snapshot and compare Allocations with last snapshot. (Diff) 
 			// ComponentManager
 				// ComponentManagersSize
 					// Check that size changes appropriately with adding new components 
+		em.fillComponentVectorsFromQueues();
 		std::cout << "\tSizeComponentManagers before creating any entity or component should be 0, is: " << em.sizeComponentManagers() << std::endl;
+
 		em.newEntity(ComponentA{ 1.0f, 2.0f, 3.0f });
+		em.fillComponentVectorsFromQueues();
 						// Should increase when a component is added which type is not added before
 		std::cout << "\tSizeComponentManagers after creating an entity with one component should be 1, is: " << em.sizeComponentManagers() << std::endl;
 		em.newEntity(ComponentB{ false, 10.0f });
+		em.fillComponentVectorsFromQueues();
+
 		std::cout << "\tSizeComponentManagers after creating an entity with another component should be 2, is: " << em.sizeComponentManagers() << std::endl;
 						// Should NOT increase when a component is added which type IS added before
 		em.newEntity(ComponentB{ false, 15.0f });
+		em.fillComponentVectorsFromQueues();
 		std::cout << "\tSizeComponentManagers after creating an entity of already added type should remain 2, is: " << em.sizeComponentManagers() << std::endl;
 				// getComponentVectorByType
 		std::cout << "\tGetComponentVectorByType<ComponentA> should return a vector of size 1, is: " << em.sizeComponentManager<ComponentA>() << std::endl;
@@ -247,6 +254,7 @@ system("PAUSE"); // Snapshot and compare Allocations with last snapshot. (Diff) 
 		em.newEntity(ComponentA{ 6.0f, 7.0f, 8.0f });
 		em.newEntity(ComponentA{ 6.0f, 7.0f, 8.0f });
 		em.newEntity(ComponentA{ 6.0f, 7.0f, 8.0f });
+		em.fillComponentVectorsFromQueues();
 
 		std::cout << "\tBefore update, EntityManager ComponentManagerA/ComponentManagerB should contain components with values: " << std::endl;
 		std::cout << "\tComponentA{ 0, 1, 2, false }, ComponentA{ 3, 4, 5, false }, ComponentA{ 6, 7, 8, false }" << std::endl;

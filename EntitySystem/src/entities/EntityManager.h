@@ -2,12 +2,13 @@
 #include <type_traits>
 #include <functional>
 #include <vector>
+#include <set>
 #include <algorithm>
 #include "Entity.h"
 #include "../systems/System.h"
 #include "components/ComponentManager.h"
 #include "components/ComponentManagerIterator.h"
-
+#include "components/ComponentGroup.h"
 
 struct ComponentBase;
 class EntityManagerSystemInterface;
@@ -26,10 +27,11 @@ private:
 	std::vector<SystemBase*> systems;
 
 	/*
-		Entities.
+		Entities and components.
 	*/
 	std::vector<ComponentManagerBase*> componentManagers;
-	unsigned int entityCounter = 1; // For assigning entity id, 0 is null value
+	std::set<size_t> indicesComponentManagersWithQueue;
+	unsigned int entityCounter = 1; // For assigning entity id.
 
 	/*
 		Unpacks parameter pack of components when creating an entity, base case.
@@ -52,52 +54,6 @@ private:
 	
 		newComponent(entity, component);
 		unpackAndStoreComponentsInManagers(entity, rest...);
-	}
-
-	/*
-		Unpacks parameter pack of ComponentTypes to get a vector of component manager iterators of their respective component managers, base case.
-	*/
-	template <typename ComponentType>
-	std::vector<ComponentManagerIterator>& unpackAndGetComponentManagersIteratorsHelper(std::vector<ComponentManagerIterator>& vec)
-	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
-
-		for (size_t i = 0; i < this->componentManagers.size(); i++)
-			if (this->componentManagers.at(i)->storesComponentType<ComponentType>())
-			{
-				vec.push_back(this->componentManagers.at(i)->begin());
-				return vec;
-			}
-		
-		return vec;
-	}
-
-	/*
-		Unpacks parameter pack of ComponentTypes to get a vector of component manager iterators of their respective component managers, recursive case.
-	*/
-	template <typename F, typename ComponentType, typename... Rest>
-	std::vector<ComponentManagerIterator>& unpackAndGetComponentManagersIteratorsHelper(std::vector<ComponentManagerIterator>& vec)
-	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
-
-		for (size_t i = 0; i < this->componentManagers.size(); i++)
-			if (this->componentManagers.at(i)->storesComponentType<ComponentType>())
-			{
-				vec.push_back(this->componentManagers.at(i)->begin());
-				return unpackAndGetComponentManagersIteratorsHelper<F, Rest...>(vec);
-			}
-		
-		return unpackAndGetComponentManagersIteratorsHelper<F, Rest...>(vec);
-	}
-
-	/*
-		Unpacks parameter pack of ComponentTypes to get a vector of component manager iterators of their respective component managers.
-	*/
-	template <typename... Rest>
-	std::vector<ComponentManagerIterator> unpackAndGetComponentManagersIterators()
-	{
-		std::vector<ComponentManagerIterator> vec;
-		return unpackAndGetComponentManagersIteratorsHelper<Rest...>(vec);
 	}
 
 public:
@@ -167,9 +123,12 @@ public:
 			// If reached this point, lambda can be executed with the components that iterators point to.
 			// Get component of each iterator and execute lambda with vector of these components 
 			{
-				std::vector<ComponentBase*> components;
+				//std::vector<ComponentBase*> components;
+				ComponentGroup components;
 				for (size_t i = 0; i < componentManagerIterators.size(); i++)
-					components.push_back(componentManagerIterators.at(i).getCurrentComponent());
+					components.components[componentManagers.at(i)->getIdentifier()] = componentManagerIterators.at(i).getCurrentComponent();
+					//components.push_back(componentManagerIterators.at(i).getCurrentComponent());
+
 				system->updateEntity(dt, components);
 			}
 
@@ -219,6 +178,7 @@ public:
 			if (componentManagers.at(i)->storesComponentType<ComponentType>())
 			{
 				componentManagers.at(i)->insertComponent(component);
+				indicesComponentManagersWithQueue.insert(i);
 				return;
 			}
 		
@@ -226,6 +186,7 @@ public:
 		// Create a new componentManager that stores the component type, and insert the component into the new manager. 
 		componentManagers.push_back(new ComponentManager<ComponentType>());
 		componentManagers.back()->insertComponent(component);
+		indicesComponentManagersWithQueue.insert(componentManagers.size() - 1);
 	}
 
 	/*
@@ -245,6 +206,8 @@ public:
 	template <typename ComponentType>
 	void disableComponentOf(const Entity& entity)
 	{
+		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+
 		for (size_t i = 0; i < componentManagers.size(); i++)
 			if (componentManagers[i]->storesComponentType<ComponentType>())
 			{
@@ -269,6 +232,16 @@ public:
 	}
 
 	/*
+		Fill componentVector of component managers with items from their insertion queue.
+	*/
+	void fillComponentVectorsFromQueues()
+	{
+		for (auto it = indicesComponentManagersWithQueue.begin(); it != indicesComponentManagersWithQueue.end(); it++)
+			componentManagers.at(*it)->fillComponentVectorFromInsertionQueue();
+		indicesComponentManagersWithQueue.clear();
+	}
+
+	/*
 		Updates every registered system, 
 		updates lifetimes of LifetimeComponents, 
 		and erases disabled components.
@@ -277,7 +250,10 @@ public:
 	{
 		// Update every system.
 		for (size_t i = 0; i < systems.size(); i++)
+		{
+			fillComponentVectorsFromQueues();
 			systems.at(i)->update(dt);
+		}
 
 		// Decrease lifetime of every LimitedLifetimeComponent.
 		for (size_t i = 0; i < componentManagers.size(); i++)
@@ -294,6 +270,8 @@ public:
 	template <typename ComponentType>
 	std::vector<ComponentType>* getComponentVectorByType()
 	{
+		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+
 		for (size_t i = 0; i < componentManagers.size(); i++)
 			if (componentManagers.at(i)->storesComponentType<ComponentType>())
 				return static_cast<ComponentManager<ComponentType>*>(componentManagers.at(i))->getComponentVector();
@@ -307,8 +285,10 @@ public:
 	template <typename ComponentType>
 	size_t sizeComponentManager() const
 	{ 
+		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+
 		for (size_t i = 0; i < componentManagers.size(); i++)
-			if (ComponentTypeIdentifier<ComponentType>::getIdentifierStatic() == componentManagers.at(i)->getIdentifier())
+			if (ComponentType::getIdentifier() == componentManagers.at(i)->getIdentifier())
 				return componentManagers.at(i)->size();
 		return 0;
 	};
