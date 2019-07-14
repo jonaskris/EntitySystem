@@ -1,104 +1,30 @@
 #pragma once
-#include "../Entity.h"
+#include "../units/Unit.h"
 
 class EntityManager;
 
-template <typename ComponentType>
-struct ComponentTypeIdentifier;
+template <typename UnitType>
+class UnitManager;
 
 /*
-	Used to specify storage conditions for specific ComponentTypes.
+	Entities are made up of components.
 
-	InitialStorageCapacity optionally defines the initial reserved capacity of vector in ComponentManager that stores the component type,
-	if not defined, CM_DEFAULT_INITIAL_CAPACITY in ComponentManager.h will be used.
+	Components can be set to be erased which takes effect at end of current update,
+	an erased component will still be active and considered by systems until actually erased.
+
+	Components can also set to be ignored. Ignored components will not remain active and
+	will not be considered by systems. Ignored components will also be erased at end of current update.
 */
 template <typename ComponentType>
-struct ComponentStorageSpecifier
+struct Component : public Unit, UnitTypeIdentifier<ComponentType>
 {
-private:
-	static size_t initialStorageCapacity;
-public:
-	static size_t getInitialStorageCapacity() { return initialStorageCapacity; }
-};
-template <typename ComponentType>
-size_t ComponentStorageSpecifier<ComponentType>::initialStorageCapacity = 0;
-
-
-/* 
-	For storing different types of components as pointers in one collection.
-*/
-struct ComponentBase
-{
-	friend class EntityManager;
-private:
-	Entity entity;
-	void setEntity(const Entity& entity) { this->entity = entity; }
 protected:
-	ComponentBase() : entity(Entity{ 0 }) {}
-	virtual ~ComponentBase() {};
+	bool erase;
+
+	Component() : erase(false) {};
 public:
-	Entity getEntity() const { return entity; }
-	virtual bool getDisabled() const = 0;
+	virtual ~Component() {};
+
+	bool getErase() const override { return erase || getIgnore(); }
+	void setErase() override { erase = true; }
 };
-
-/*
-	Base of every basic component.
-
-	BasicComponents are erased by setting disabled to true. A disabled component will not be considered by systems and will be deleted at the end of every update.
-*/
-template <typename ComponentType>
-struct BasicComponent : public ComponentBase, ComponentTypeIdentifier<ComponentType>
-{
-	bool disabled = false;
-protected:
-	BasicComponent() {};
-public:
-	bool getDisabled() const override { return disabled; }
-};
-
-/*
-	Lifetime is decreased by dt every update.
-
-	LimitedLifetimeComponents are disabled by setting lifetime to 0. A disabled component will not be considered by systems and will be deleted at the end of every update.
-*/
-template <typename ComponentType>
-struct LimitedLifetimeComponent : public ComponentBase, ComponentTypeIdentifier<ComponentType>
-{
-	double lifetime;
-protected:
-	LimitedLifetimeComponent(const double& lifetime) : lifetime(lifetime) {}
-public:
-	bool getDisabled() const override { return lifetime <= 0; }
-};
-
-/*
-	Wraps a global variable that ensures each Component has an unique identifier for each ComponentType.
-*/
-class ComponentTypeIdentifierCounter
-{
-	template <typename ComponentType>
-	friend struct ComponentTypeIdentifier;
-
-	static inline size_t counter = 1;
-};
-
-/*
-	Identifies a component with a unique identifier.
-*/
-template <typename ComponentType>
-struct ComponentTypeIdentifier
-{
-private:
-	static inline size_t identifier = 0;
-	static bool isLimitedLifetimeComponent;
-public:
-	static size_t getIdentifier() {
-
-		if (identifier == 0)
-			identifier = ComponentTypeIdentifierCounter::counter++;
-		return identifier;
-	};
-	static bool getIsLimitedLifetimeComponent() { return isLimitedLifetimeComponent; };
-};
-template <typename ComponentType>
-bool ComponentTypeIdentifier<ComponentType>::isLimitedLifetimeComponent = std::is_base_of<LimitedLifetimeComponent<ComponentType>, ComponentType>::value;
