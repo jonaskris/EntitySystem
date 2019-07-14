@@ -3,19 +3,13 @@
 
 /*
 	Component used for testing purposes.
+
+	UnitStorageSpecifier is used here to set an initial storage capacity. This is done to avoid
+	excessive reallocation in the vector the components are stored in.
 */
-struct ComponentA : public BasicComponent<ComponentA>, ComponentStorageSpecifier<ComponentA>
+struct ComponentA : public Component<ComponentA>, UnitStorageSpecifier<ComponentA>
 {
 	float x, y, z;
 	ComponentA(float x, float y, float z) : x(x), y(y), z(z) {};
 };
-size_t ComponentStorageSpecifier<ComponentA>::initialStorageCapacity = 1024;
-
-/*
-	Component used for testing purposes.
-*/
-struct ComponentB : public LimitedLifetimeComponent<ComponentB>
-{
-	bool b;
-	ComponentB(bool b, const float& lifetime) : LimitedLifetimeComponent(lifetime), b(b) {};
-};
+size_t UnitStorageSpecifier<ComponentA>::initialStorageCapacity = 1024;

@@ -4,22 +4,20 @@
 #include <vector>
 #include <set>
 #include <algorithm>
-#include "Entity.h"
 #include "../systems/System.h"
-#include "components/ComponentManager.h"
-#include "components/ComponentManagerIterator.h"
-#include "components/ComponentGroup.h"
+#include "units/UnitManager.h"
+#include "units/UnitManagerIterator.h"
+#include "units/UnitGroup.h"
+#include "components/Component.h"
 
-struct ComponentBase;
-class EntityManagerSystemInterface;
+struct Unit;
 
 /*
-	Stores entities, systems and component managers,
+	Stores entities, systems and units,
 	and defines their relationship.
 */
 class EntityManager
 {
-	friend class EntityManagerSystemInterface;
 private:
 	/*
 		Systems.
@@ -27,272 +25,354 @@ private:
 	std::vector<SystemBase*> systems;
 
 	/*
-		Entities and components.
+		Units and entities.
 	*/
-	std::vector<ComponentManagerBase*> componentManagers;
-	std::set<size_t> indicesComponentManagersWithQueue;
-	unsigned int entityCounter = 1; // For assigning entity id.
+	std::vector<UnitManagerBase*> unitManagers;
+	unsigned int entityIdCounter = 1; // For assigning entityId.
 
 	/*
-		Unpacks parameter pack of components when creating an entity, base case.
+		Unpacks parameter pack of units when creating an entity, base case.
 	*/
-	template <typename ComponentType>
-	void unpackAndStoreComponentsInManagers(const Entity& entity, const ComponentType& component)
+	template <typename UnitType>
+	void unpackAndStoreUnitsInManagers(const size_t& entityId, const UnitType& unit)
 	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
-	
-		newComponent(entity, component);
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
+
+		newUnit(entityId, unit);
 	}
 
 	/*
-		Unpacks parameter pack of components when creating an entity, recursive case.
+		Unpacks parameter pack of units when creating an entity, recursive case.
 	*/
-	template <typename ComponentType, typename... Rest>
-	void unpackAndStoreComponentsInManagers(const Entity& entity, const ComponentType& component, const Rest&... rest)
+	template <typename UnitType, typename... Rest>
+	void unpackAndStoreUnitsInManagers(const size_t& entityId, const UnitType& unit, const Rest&... rest)
 	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
-	
-		newComponent(entity, component);
-		unpackAndStoreComponentsInManagers(entity, rest...);
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
+
+		newUnit(entityId, unit);
+		unpackAndStoreUnitsInManagers(entityId, rest...); 
+	}
+
+	/*
+		Unpacks parameter pack of unit types, base case.
+	*/
+	template <typename UnitType>
+	static void unpackUnitTypesHelper(std::vector<size_t>& unitIdentifiersUnpacking)
+	{
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
+
+		unitIdentifiersUnpacking.push_back(UnitType::getIdentifier());
+	}
+
+	/*
+		Unpacks parameter pack of unit types, recursive case.
+	*/
+	template <typename F, typename UnitType, typename... Rest>
+	static void unpackUnitTypesHelper(std::vector<size_t>& unitIdentifiersUnpacking)
+	{
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
+
+		unitIdentifiersUnpacking.push_back(UnitType::getIdentifier());
+		unpackUnitTypesHelper<F, Rest...>(unitIdentifiersUnpacking);
+	}
+
+	/*
+		Unpacks parameter pack of unit types.
+	*/
+	template <typename... UnitTypes>
+	static std::vector<size_t> unpackUnitTypes()
+	{
+		std::vector<size_t> unitIdentifiersUnpacking;
+		unpackUnitTypesHelper<UnitTypes...>(unitIdentifiersUnpacking);
+		return unitIdentifiersUnpacking;
 	}
 
 public:
 	EntityManager() {};
 	~EntityManager() 
 	{
-		for (size_t i = 0; i < componentManagers.size(); i++)
-			delete componentManagers[i];
+		for (size_t i = 0; i < unitManagers.size(); i++)
+			delete unitManagers[i];
 		for (size_t i = 0; i < systems.size(); i++)
 			delete systems[i];
 	};
 
 	/*
-		Executes a System.updateEntity on every entity that has specified set of component types.
+		Executes a System.updateEntity on every entity that has specified set of unit types.
 	*/
-	void each(const double& dt, SystemBase* system, std::vector<size_t>& componentIdentifiers)
+	void each(const double& dt, SystemBase* system, std::vector<size_t>& unitIdentifiers)
 	{
-		if (componentIdentifiers.size() == 0)
+		if (unitIdentifiers.size() == 0)
 			return;
 
-		// Get each relevant ComponentManager and create an iterator for it.
-		std::vector<ComponentManagerIterator> componentManagerIterators;
-		for (size_t i = 0; i < componentIdentifiers.size(); i++)
-			for (size_t j = 0; j < this->componentManagers.size(); j++)
-				if (componentIdentifiers[i] == this->componentManagers[j]->getIdentifier())
-					componentManagerIterators.push_back(this->componentManagers[j]->begin());
+		// Get an iterator to every relevant unitManager.
+		std::vector<UnitManagerIteratorBase*> unitManagerIterators;
+		for (size_t i = 0; i < unitIdentifiers.size(); i++)
+			for (size_t j = 0; j < this->unitManagers.size(); j++)
+				if (unitIdentifiers.at(i) == this->unitManagers.at(j)->getIdentifier())
+					unitManagerIterators.push_back(this->unitManagers.at(j)->begin());
 
-		// Check that the ComponentManagers the ComponentManagerIterators point to are not empty
-		for (size_t i = 0; i < componentManagerIterators.size(); i++)
-			if (componentManagerIterators[i].getComponentManagerSize() == 0)
+		// Check that the UnitManagers the UnitManagerIterators point to are not empty (Unit vector, not queue).
+		for (size_t i = 0; i < unitManagerIterators.size(); i++)
+			if (unitManagerIterators.at(i)->size() == 0)
 				return;
 
-		// Check if iterator/manager was found for each of ComponentTypes, if not, return.
-		if (componentIdentifiers.size() != componentManagerIterators.size())
+		// Check if iterator UnitManager was found for each of unitIdentifiers.
+		if (unitIdentifiers.size() != unitManagerIterators.size())
 			return;
 
-		// Since unpacking iterators results in reversed order, it must be reversed again to get original order.
-		std::reverse(componentManagerIterators.begin(), componentManagerIterators.end());
+		// To make sure an each on only untargeted units is only done once (since an iterator on untargeted units is not incremented and wont end the loop that way).
+		bool allUntargeted = true;
+		for (size_t i = 0; i < unitManagerIterators.size(); i++)
+			if (!unitManagerIterators.at(i)->getStoresUntargeted())
+				allUntargeted = false;
 
-		// Create vector of which iterators indices would be where if sorted, from smallest to biggest. To reduce redundant iterating.
-		std::vector<size_t> indicesSorted;
-		indicesSorted.reserve(componentManagerIterators.size());
-		for (size_t i = 0; i < componentManagerIterators.size(); i++)
-			indicesSorted.push_back(i);
-		std::sort(indicesSorted.begin(), indicesSorted.end(), [&componentManagerIterators](const size_t & l, const size_t & r) { return componentManagerIterators[l].getComponentManagerSize() < componentManagerIterators[r].getComponentManagerSize(); });
-
-
-		// While first iterator is not at end.
-		do
+ 		size_t biggestEntityId = 0;
+		// For every iterator
+		do 
 		{
-			if (componentManagerIterators.at(indicesSorted[0]).getCurrentComponent()->getDisabled())
-				goto incrementFirst;
-			//For every other iterator.
-			for (size_t i = 1; i < componentManagerIterators.size(); i++)
+			for (size_t i = 0; i < unitManagerIterators.size(); i++)
 			{
-				// While entity of component at current iterator is smaller than first iterators entity.
-				while (componentManagerIterators.at(indicesSorted[i]).getCurrentComponent()->entity < componentManagerIterators.at(indicesSorted[0]).getCurrentComponent()->entity)
-					if(!componentManagerIterators.at(i).increment())
-						return;
+				if (unitManagerIterators.at(i)->getStoresUntargeted())
+					continue;
 
-				// If entity of component at first iterator is not the same as entity of component at current iterator or disabled, 
-				// increment first iterator and search for next set of components.
-				if (!(componentManagerIterators.at(indicesSorted[i]).getCurrentComponent()->entity == componentManagerIterators.at(indicesSorted[0]).getCurrentComponent()->entity) || componentManagerIterators.at(indicesSorted[i]).getCurrentComponent()->getDisabled())
-					goto incrementFirst;
+				do 
+				{
+					if (!unitManagerIterators.at(i)->increment())
+						goto end;
+				} while (unitManagerIterators.at(i)->getGroup().first->getEntityId() < biggestEntityId);
+
+				if (unitManagerIterators.at(i)->getGroup().first->getEntityId() > biggestEntityId)
+				{
+					biggestEntityId = unitManagerIterators.at(i)->getGroup().first->getEntityId();
+
+					if(i != 0)
+						goto continueOuter;
+				}
+				
 			}
 
-			// If reached this point, lambda can be executed with the components that iterators point to.
-			// Get component of each iterator and execute lambda with vector of these components 
 			{
-				//std::vector<ComponentBase*> components;
-				ComponentGroup components;
-				for (size_t i = 0; i < componentManagerIterators.size(); i++)
-					components.components[componentManagers.at(i)->getIdentifier()] = componentManagerIterators.at(i).getCurrentComponent();
-					//components.push_back(componentManagerIterators.at(i).getCurrentComponent());
+				UnitGroup unitGroup;
+				for (size_t i = 0; i < unitManagerIterators.size(); i++)
+					unitGroup.units[unitManagerIterators.at(i)->getUnitTypeIdentifier()] = unitManagerIterators.at(i)->getGroup();
+				system->updateEntity(dt, unitGroup);
 
-				system->updateEntity(dt, components);
+				biggestEntityId++; 
 			}
 
-		incrementFirst:;
-		} while (componentManagerIterators.at(indicesSorted[0]).increment());
+		continueOuter:;
+		} while (!allUntargeted);
+		end:;
 	}
 
 	/*
 		Creates an entity.
 		Returns the entity.
 	*/
-	Entity newEntity()
+	size_t newEntity()
 	{
-		Entity newEntity{ entityCounter };
-		entityCounter++;
-	
-		return newEntity;
+		return entityIdCounter++;
 	}
 
 	/*
-		Creates an entity and stores components assigned to the new entity.
+		Creates an entity and stores units assigned to the new entity.
 		Returns the entity.
 	*/
-	template <typename... ComponentTypes>
-	Entity newEntity(const ComponentTypes&... components)
+	template <typename... UnitTypes>
+	size_t newEntity(const UnitTypes&... units)
 	{
-		Entity newEntity{ entityCounter };
-		entityCounter++;
+		size_t newEntity = entityIdCounter++;
 	
-		unpackAndStoreComponentsInManagers(newEntity, components...);
+		unpackAndStoreUnitsInManagers(newEntity, units...);
 	
 		return newEntity;
 	}
 
 	/*
-		Stores a component in componentmanagers and assigns it to the specified entity.
+		Stores a unit in a UnitManager and assigns it to the specified entity.
 	*/
-	template <typename ComponentType>
-	void newComponent(const Entity& entity, ComponentType component)
+	template <typename UnitType>
+	size_t newUnit(const size_t& entityId, UnitType unit)
 	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
 
-		component.setEntity(entity);
+		if (unit.getEntityId() == 0)
+			unit.setEntityId(entityId);
 
-		// Try storing component in an existing manager.
-		for (size_t i = 0; i < componentManagers.size(); i++)
-			if (componentManagers.at(i)->storesComponentType<ComponentType>())
+		// Try storing unit in an existing manager.
+		for (size_t i = 0; i < unitManagers.size(); i++)
+			if (unitManagers.at(i)->storesUnitType<UnitType>())
 			{
-				componentManagers.at(i)->insertComponent(component);
-				indicesComponentManagersWithQueue.insert(i);
-				return;
+				unitManagers.at(i)->insertUnit(unit);
+				return unit.getEntityId();
 			}
 		
-		// If unsuccessful in storing component above, there were no component manager that stores given ComponentType.
-		// Create a new componentManager that stores the component type, and insert the component into the new manager. 
-		componentManagers.push_back(new ComponentManager<ComponentType>());
-		componentManagers.back()->insertComponent(component);
-		indicesComponentManagersWithQueue.insert(componentManagers.size() - 1);
+		// If unsuccessful in storing unit above, there were no UnitManager that stores given unit type.
+		// Create a new unit manager that stores the unit type, and insert the unit into the new manager. 
+		unitManagers.push_back(new UnitManager<UnitType>());
+		unitManagers.back()->insertUnit(unit);
+
+		return unit.getEntityId();
 	}
 
 	/*
-		Disables all components of specified entity to erase them after current update.
-		Disabled components are not considered by systems.
-	*/
-	void disableComponentsOf(const Entity& entity)
-	{	
-		for (size_t i = 0; i < componentManagers.size(); i++)
-			componentManagers[i]->disableComponentOf(entity);
-	}
+		Stores a unit in a UnitManager and assigns it to a new entity.
 
-	/*
-		Disables component of specified ComponentType and Entity to erase them after current update.
-		Disabled components are not considered by systems.
+		Returns entityId
 	*/
-	template <typename ComponentType>
-	void disableComponentOf(const Entity& entity)
+	template <typename UnitType>
+	size_t newUnit(UnitType unit)
 	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
 
-		for (size_t i = 0; i < componentManagers.size(); i++)
-			if (componentManagers[i]->storesComponentType<ComponentType>())
+		if (unit.getEntityId() == 0)
+			unit.setEntityId(newEntity());
+
+		// Try storing unit in an existing manager.
+		for (size_t i = 0; i < unitManagers.size(); i++)
+			if (unitManagers.at(i)->storesUnitType<UnitType>())
 			{
-				componentManagers[i]->disableComponentOf(entity);
-				return;
+				unitManagers.at(i)->insertUnit(unit);
+				return unit.getEntityId();
 			}
+
+		// If unsuccessful in storing unit above, there were no UnitManager that stores given unit type.
+		// Create a new UnitManager that stores the unit type, and insert the unit into the new manager. 
+		unitManagers.push_back(new UnitManager<UnitType>());
+		unitManagers.back()->insertUnit(unit);
+	
+		return unit.getEntityId();
 	}
 
 	/*
-		Registers a system that will be used to update components on update.
+		Set units of entity to be erased after current update, the component will still be considered by systems.
+		If no UnitTypes are specified, all units of the entity are set to be erased.
+
+		Note: Events are erased after every update automatically.
+	*/
+	template <typename... UnitTypes>
+	void setErase(const size_t& entityId)
+	{	
+		if constexpr (sizeof...(UnitTypes) == 0)
+		{
+			for (size_t i = 0; i < unitManagers.size(); i++)
+				unitManagers[i]->setErase(entityId);
+				
+		} else {
+			std::vector<size_t> unitIdentifiers = unpackUnitTypes<UnitTypes...>();
+
+			for (size_t i = 0; i < unitManagers.size(); i++)
+				if (std::find(unitIdentifiers.begin(), unitIdentifiers.end(), unitManagers[i]->getIdentifier()) != unitIdentifiers.end())
+					unitManagers[i]->setErase(entityId);
+
+		}
+	}
+
+	/*
+		Set units of entity to be ignored by systems and erased on end of update.
+		If no UnitTypes are specified, all units of the entity are set to be ignored.
+	*/
+	template <typename... UnitTypes>
+	void setIgnore(const size_t& entityId)
+	{
+		if constexpr (sizeof...(UnitTypes) == 0)
+		{
+			for (size_t i = 0; i < unitManagers.size(); i++)
+				unitManagers[i]->setIgnore(entityId);
+
+		} else {
+			std::vector<size_t> unitIdentifiers = unpackUnitTypes<UnitTypes...>();
+
+			for (size_t i = 0; i < unitManagers.size(); i++)
+				if (std::find(unitIdentifiers.begin(), unitIdentifiers.end(), unitManagers[i]->getIdentifier()) != unitIdentifiers.end())
+					unitManagers[i]->setIgnore(entityId);
+		}
+	}
+
+	/*
+		Registers a system that will be used to update units on update.
 		ConstructorArgs are optional.
 		Returns whether the system was registered successfully.
 	*/
 	template <typename SystemType>
-	bool registerSystem(SystemType* system)
+	void registerSystem(SystemType* system)
 	{
 		static_assert(std::is_base_of<SystemBase, SystemType>::value, "SystemType must be derived from SystemBase!");
 		
 		systems.push_back(system);
 		systems.back()->setEntityManager(this);
-		return true;
 	}
 
 	/*
-		Fill componentVector of component managers with items from their insertion queue.
-	*/
-	void fillComponentVectorsFromQueues()
-	{
-		for (auto it = indicesComponentManagersWithQueue.begin(); it != indicesComponentManagersWithQueue.end(); it++)
-			componentManagers.at(*it)->fillComponentVectorFromInsertionQueue();
-		indicesComponentManagersWithQueue.clear();
-	}
-
-	/*
-		Updates every registered system, 
-		updates lifetimes of LifetimeComponents, 
-		and erases disabled components.
+		Updates every System and UnitManager.
 	*/
 	void update(const double& dt)
 	{
+		// PreUpdate every UnitManager. Inserts into unit vector from insertionQueue.
+		for (size_t i = 0; i < unitManagers.size(); i++)
+			unitManagers.at(i)->preUpdate();
+
 		// Update every system.
 		for (size_t i = 0; i < systems.size(); i++)
-		{
-			fillComponentVectorsFromQueues();
 			systems.at(i)->update(dt);
-		}
 
-		// Decrease lifetime of every LimitedLifetimeComponent.
-		for (size_t i = 0; i < componentManagers.size(); i++)
-			componentManagers[i]->updateComponentLifetimes(dt);
-
-		// Erase every BasicComponent with disabled = true, or LimitedLifetimeComponent with 0 or less lifetime
-		for (size_t i = 0; i < componentManagers.size(); i++)
-			componentManagers[i]->eraseDisabledComponents();
+		// PostUpdate every UnitManager. Updates lifetimes and erases units set to be erased.
+		for (size_t i = 0; i < unitManagers.size(); i++)
+			unitManagers.at(i)->postUpdate(dt);
 	}
 
 	/*
-		Retrieves vector to all components by type.
+		Inserts units from UnitManager queues.
+		Used for testing purposes.
 	*/
-	template <typename ComponentType>
-	std::vector<ComponentType>* getComponentVectorByType()
+	void insertFromQueues()
 	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+		for (size_t i = 0; i < unitManagers.size(); i++)
+			unitManagers.at(i)->insertFromQueue();
+	}
 
-		for (size_t i = 0; i < componentManagers.size(); i++)
-			if (componentManagers.at(i)->storesComponentType<ComponentType>())
-				return static_cast<ComponentManager<ComponentType>*>(componentManagers.at(i))->getComponentVector();
+	/*
+		Retrieves vector to all units by type.
+	*/
+	template <typename UnitType>
+	std::vector<UnitType>* getUnitVector()
+	{
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
+
+		for (size_t i = 0; i < unitManagers.size(); i++)
+			if (unitManagers.at(i)->storesUnitType<UnitType>())
+				return static_cast<UnitManager<UnitType>*>(unitManagers.at(i))->getUnits();
 		
 		return nullptr;
 	}
 
 	/*
-		Retrieves size of ComponentManager that stores specified type.
+		Retrieves summed size of every UnitManager.
 	*/
-	template <typename ComponentType>
-	size_t sizeComponentManager() const
-	{ 
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+	size_t sizeUnits() const
+	{
+		size_t sum = 0;
+		for (size_t i = 0; i < unitManagers.size(); i++)
+				sum += unitManagers.at(i)->size();
 
-		for (size_t i = 0; i < componentManagers.size(); i++)
-			if (ComponentType::getIdentifier() == componentManagers.at(i)->getIdentifier())
-				return componentManagers.at(i)->size();
+		return sum;
+	};
+
+	/*
+		Retrieves size of UnitManager that stores specified type.
+	*/
+	template <typename UnitType>
+	size_t sizeUnitsType() const
+	{ 
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
+
+		for (size_t i = 0; i < unitManagers.size(); i++)
+			if (UnitType::getIdentifier() == unitManagers.at(i)->getIdentifier())
+				return unitManagers.at(i)->size();
 		return 0;
 	};
 
-	size_t sizeComponentManagers() const { return componentManagers.size(); };
+	size_t sizeUnitManagers() const { return unitManagers.size(); };
 	size_t sizeSystems() const { return systems.size(); };
 };

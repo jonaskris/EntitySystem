@@ -1,8 +1,10 @@
 #pragma once
 #include <vector>
 #include <functional>
+#include <algorithm>
+#include "../entities/events/Event.h"
 #include "../entities/components/Component.h"
-#include "../entities/components/ComponentGroup.h"
+#include "../entities/units/UnitGroup.h"
 
 
 class EntityManager;
@@ -14,86 +16,84 @@ class SystemBase
 {
 	friend class EntityManager;
 private:
-	virtual void setEntityManager(EntityManager* entityManager) = 0;
+	void setEntityManager(EntityManager* entityManager) { this->entityManager = entityManager; };
 protected:
+	EntityManager* entityManager = nullptr;
+
 	virtual ~SystemBase() { };
+
+	/*
+		Called on every EntityManager.update once every update before updating individual entities.
+	*/
 	virtual void update(const double& dt) = 0;
-	virtual void updateEntity(const double& dt, ComponentGroup& components) = 0;
+
+	/*
+		Called on every EntityManager.update for each set of entities with types UnitTypes.
+	*/
+	virtual void updateEntity(const double& dt, UnitGroup& units) = 0;
 public:
 };
 
 /*
 	Base class of systems.
-	Defines operations on a set of components that has the same entity, which execute on every update of EntityManager.
+	Defines operations on a set of units that has the same entity (Except event), which execute on every update of EntityManager.
 */
-template <typename... ComponentTypes>
+template <typename... UnitTypes>
 class System : public SystemBase
 {
 	friend class EntityManager;
 
 	/*
-		Identifiers of every type of component the system should act on. Ordered.
+		Identifiers of every type of unit the system should act on.
 	*/
-	static std::vector<size_t> componentIdentifiers;
+	static std::vector<size_t> unitIdentifiers;
 
 	/*
-		Unpacks parameter pack of component types, base case.
+		Unpacks parameter pack of unit types, base case.
 	*/
-	template <typename ComponentType>
-	static void unpackComponentTypesHelper(std::vector<size_t>& componentIdentifiersUnpacking)
+	template <typename UnitType>
+	static void unpackUnitTypesHelper(std::vector<size_t>& unitIdentifiersUnpacking)
 	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
 
-		componentIdentifiersUnpacking.push_back(ComponentType::getIdentifier());
+		unitIdentifiersUnpacking.push_back(UnitType::getIdentifier());
 	}
 
 	/*
-		Unpacks parameter pack of component types, recursive case.
+		Unpacks parameter pack of unit types, recursive case.
 	*/
-	template <typename F, typename ComponentType, typename... Rest>
-	static void unpackComponentTypesHelper(std::vector<size_t>& componentIdentifiersUnpacking)
+	template <typename F, typename UnitType, typename... Rest>
+	static void unpackUnitTypesHelper(std::vector<size_t>& unitIdentifiersUnpacking)
 	{
-		static_assert(std::is_base_of<ComponentBase, ComponentType>::value, "ComponentType must be derived from ComponentBase!");
+		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
 
-		componentIdentifiersUnpacking.push_back(ComponentType::getIdentifier());
-		unpackComponentTypesHelper<F, Rest...>(componentIdentifiersUnpacking);
+		unitIdentifiersUnpacking.push_back(UnitType::getIdentifier());
+		unpackUnitTypesHelper<F, Rest...>(unitIdentifiersUnpacking);
 	}
 
 	/*
-		Unpacks parameter pack of component types.
+		Unpacks parameter pack of unit types.
 	*/
-	static std::vector<size_t> unpackComponentTypes()
+	static std::vector<size_t> unpackUnitTypes()
 	{
-		std::vector<size_t> componentIdentifiersUnpacking;
-		unpackComponentTypesHelper<ComponentTypes...>(componentIdentifiersUnpacking);
-		return componentIdentifiersUnpacking;
+		std::vector<size_t> unitIdentifiersUnpacking;
+		unpackUnitTypesHelper<UnitTypes...>(unitIdentifiersUnpacking);
+
+		std::reverse(unitIdentifiersUnpacking.begin(), unitIdentifiersUnpacking.end());
+
+		return unitIdentifiersUnpacking;
 	}
 
-
-	void setEntityManager(EntityManager* entityManager) { this->entityManager = entityManager; };
 protected:
-	virtual ~System() { };
 	System() { };
-
-	EntityManager* entityManager = nullptr;
-
-	/*
-		Called on every EntityManager.update once every update before updating individual entities.
-	*/
-	virtual void update(const double& dt) override = 0;
-
-	/*
-		Called on every EntityManager.update for each set of entities that have the components specified in overridden update method.
-	*/
-	virtual void updateEntity(const double& dt, ComponentGroup& components) = 0;
 
 	/*
 		To be called by System.Update by each specific type of System whenever needed.
 	*/
 	void updateEntities(const double& dt)
 	{
-		entityManager->each(dt, this, componentIdentifiers);
+		this->entityManager->each(dt, this, unitIdentifiers);
 	}
 };
-template <typename... ComponentTypes>
-std::vector<size_t> System<ComponentTypes...>::componentIdentifiers = System<ComponentTypes...>::unpackComponentTypes();
+template <typename... UnitTypes>
+std::vector<size_t> System<UnitTypes...>::unitIdentifiers = System<UnitTypes...>::unpackUnitTypes();

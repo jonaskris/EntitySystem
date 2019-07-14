@@ -1,16 +1,18 @@
 #pragma once
 #include "System.h"
+#include "../entities/components/Components.h"
+#include "../entities/events/Events.h"
 
 class EntityManager;
 
 /*
-	Example system that acts on ComponentA and ComponentB.
+	Example system that acts on ComponentA and EventA (UnTargeted).
 */
-class System_Example : public System<ComponentA, ComponentB>
+class SystemA : public System<ComponentA, EventA>
 {
 	friend class EntityManager;
 public:
-	explicit System_Example() {};
+	explicit SystemA() {};
 private:
 	/*
 		Update is called on every update of EntityManager, as long as it is registered in the EntityManager.
@@ -24,36 +26,48 @@ private:
 		updateEntities(dt);
 	}
 
-	void updateEntity(const double& dt, ComponentGroup& components) override
+	void updateEntity(const double& dt, UnitGroup& units) override
 	{
-		ComponentA* a = components.get<ComponentA>();
-		ComponentB* b = components.get<ComponentB>();
+		// The unit group will contain the unit types that the System template was instantiated with.
+		ComponentA* a = units.get<ComponentA>().first;
+		size_t aSize = units.get<ComponentA>().second;
 
-		if (b->b)
-		{
-			a->x += (float)dt;
-			a->y += (float)dt;
-			a->z += (float)dt;
-		}
+		EventA& b = units.get<EventA>().first[0];
+
+		for(size_t i = 0; i < aSize; i++)
+			if (b.b)
+			{
+				a[i].x += (float)dt;
+				a[i].y += (float)dt;
+				a[i].z += (float)dt;
+			}
 	}
 };
 
 /*
-	To test unique identifiers.
+	Example system that acts on ComponentA and EventB (Targeted).
 */
-class System_Test : public System<>
+class SystemB : public System<ComponentA, EventB>
 {
 	friend class EntityManager;
 public:
-	explicit System_Test() {};
+	explicit SystemB() {};
 private:
 	void update(const double& dt) override
 	{
-
+		updateEntities(dt);
 	}
 
-	void updateEntity(const double& dt, ComponentGroup& components) override
+	void updateEntity(const double& dt, UnitGroup& units) override
 	{
+		ComponentA& a = units.get<ComponentA>().first[0];
+		EventB& b = units.get<EventB>().first[0];
 
+		if (b.b)
+		{
+			a.x += (float)dt;
+			a.y += (float)dt;
+			a.z += (float)dt;
+		}
 	}
 };
