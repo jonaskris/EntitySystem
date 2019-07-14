@@ -8,6 +8,7 @@ It keeps track of and assigns entityIds, and provides the interface between Unit
 ### UnitManager
 UnitManagers store one UnitType each in a sorted vector on the units enityId.
 
+
 Instead of Units being inserted and erased during updates, they are inserted through an insertion queue, which is emptied at the beginning every update, and erased by setting a flag, where every flagged Unit is erased together after every update.
 This is done to avoid iterator invalidation, and excessive reallocation.
 
@@ -40,3 +41,11 @@ Targeted Events do have a target or Entity its a part of, and are only considere
 ## Systems
 Systems define interaction between Entities and Events.
 They are updated in two parts. One update to change internal state of the System, and one update per Entity that has all the requested Units.
+Events are a type of LimitedLifetimeUnit, and are erased automatically once lifetime is less 
+than or equal to zero.
+
+Basic Events do not have a target or an Entity its a part of, 
+and its entityId is there only to uniquely identify the Event.
+
+Targeted Events do have a target or Entity its a part of, and are only considered
+by Systems in context with other units with same entityId.
