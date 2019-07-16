@@ -2,9 +2,9 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
-#include "../entities/events/Event.h"
-#include "../entities/components/Component.h"
-#include "../entities/units/UnitGroup.h"
+#include "../events/Event.h"
+#include "../units/Unit.h"
+#include "../units/UnitGroup.h"
 
 
 class EntityManager;
@@ -62,7 +62,7 @@ class System : public SystemBase
 	/*
 		Unpacks parameter pack of unit types, recursive case.
 	*/
-	template <typename F, typename UnitType, typename... Rest>
+	template <typename UnitType, typename F, typename... Rest>
 	static void unpackUnitTypesHelper(std::vector<size_t>& unitIdentifiersUnpacking)
 	{
 		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
@@ -78,8 +78,6 @@ class System : public SystemBase
 	{
 		std::vector<size_t> unitIdentifiersUnpacking;
 		unpackUnitTypesHelper<UnitTypes...>(unitIdentifiersUnpacking);
-
-		std::reverse(unitIdentifiersUnpacking.begin(), unitIdentifiersUnpacking.end());
 
 		return unitIdentifiersUnpacking;
 	}
@@ -97,3 +95,54 @@ protected:
 };
 template <typename... UnitTypes>
 std::vector<size_t> System<UnitTypes...>::unitIdentifiers = System<UnitTypes...>::unpackUnitTypes();
+
+/*
+	A system that derives from OptionalSystemTypes can set a bool value for every UnitType.
+
+	UnitTypes are mandatory by default, that is, they need to be present for System.updateEntities to be called with each type.
+	When a UnitType is set to optional, System.updateEntities will be called with an entity, regardless if the type was found for the
+	entity or not.
+*/
+template <bool... UnitsOptional>
+class OptionalSystemTypes
+{
+private:
+	static std::vector<bool> optionalTypes;
+
+	/*
+		Unpacks parameter pack of bools, base case.
+	*/
+	template <bool UnitOptional>
+	static void unpackUnitOptionalHelper(std::vector<bool>& optionalTypesUnpacking)
+	{
+		optionalTypesUnpacking.push_back(UnitOptional);
+	}
+
+	/*
+		Unpacks parameter pack of bools, recursive case.
+	*/
+	template <bool UnitOptional, bool F, bool... UnitsOptional>
+	static void unpackUnitOptionalHelper(std::vector<bool>& optionalTypesUnpacking)
+	{
+		optionalTypesUnpacking.push_back(UnitOptional);
+		unpackUnitOptionalHelper<F, UnitsOptional...>(optionalTypesUnpacking);
+	}
+
+	/*
+		Unpacks parameter pack of bools.
+	*/
+	static std::vector<bool> unpackUnitOptional()
+	{
+		std::vector<bool> optionalTypesUnpacking;
+		unpackUnitOptionalHelper<UnitsOptional...>(optionalTypesUnpacking);
+
+		return optionalTypesUnpacking;
+	}
+public:
+	std::vector<bool> getOptionalTypes()
+	{
+		return optionalTypes;
+	}
+};
+template <bool... UnitsOptional>
+std::vector<bool> OptionalSystemTypes<UnitsOptional...>::optionalTypes = OptionalSystemTypes<UnitsOptional...>::unpackUnitOptional();
