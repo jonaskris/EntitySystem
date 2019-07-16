@@ -1,7 +1,7 @@
 #pragma once
 #include "System.h"
-#include "../entities/components/Components.h"
-#include "../entities/events/Events.h"
+#include "../components/Components.h"
+#include "../events/Events.h"
 
 class EntityManager;
 

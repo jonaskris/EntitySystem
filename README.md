@@ -49,3 +49,8 @@ and its entityId is there only to uniquely identify the Event.
 
 Targeted Events do have a target or Entity its a part of, and are only considered
 by Systems in context with other units with same entityId.
+
+Systems can optionally derive from OptionalSystemTypes.
+A system that derives from OptionalSystemTypes can set a bool value for every UnitType.
+UnitTypes are mandatory by default, that is, they need to be present for System.updateEntities to be called with each type.
+When a UnitType is set to optional, System.updateEntities will be called with an entity, regardless if a unit of this type was found for the entity or not.

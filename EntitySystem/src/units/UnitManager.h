@@ -7,7 +7,7 @@
 #include "Unit.h"
 #include "../components/Component.h"
 #include "../events/Event.h"
-#include "../../Algorithm.h"
+#include "../Algorithm.h"
 #include "UnitManagerIterator.h"
 
 #define UM_DEFAULT_INITIAL_CAPACITY 256

@@ -1,12 +1,12 @@
 #include <iostream>
 #include <chrono>
 #include <functional>
-#include "entities/components/Components.h"
-#include "entities/events/Events.h"
-#include "entities/components/Component.h"
-#include "entities/units/UnitManager.h"
-#include "entities/units/UnitManagerIterator.h"
-#include "entities/EntityManager.h"
+#include "components/Components.h"
+#include "events/Events.h"
+#include "components/Component.h"
+#include "units/UnitManager.h"
+#include "units/UnitManagerIterator.h"
+#include "EntityManager.h"
 #include "systems/System.h"
 #include "systems/Systems.h"
 

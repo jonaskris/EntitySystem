@@ -4,7 +4,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
-#include "../systems/System.h"
+#include "systems/System.h"
 #include "units/UnitManager.h"
 #include "units/UnitManagerIterator.h"
 #include "units/UnitGroup.h"
@@ -67,7 +67,7 @@ private:
 	/*
 		Unpacks parameter pack of unit types, recursive case.
 	*/
-	template <typename F, typename UnitType, typename... Rest>
+	template <typename UnitType, typename F, typename... Rest>
 	static void unpackUnitTypesHelper(std::vector<size_t>& unitIdentifiersUnpacking)
 	{
 		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
@@ -99,8 +99,11 @@ public:
 
 	/*
 		Executes a System.updateEntity on every entity that has specified set of unit types.
+
+		If unitsOptional[i] is true, unitIdentifiers[i] will be considered an optional unit, 
+		and System.updateEntity will update an entity, regardless if a unit of that type was found.
 	*/
-	void each(const double& dt, SystemBase* system, std::vector<size_t>& unitIdentifiers)
+	void each(const double& dt, SystemBase* system, std::vector<size_t> unitIdentifiers, std::vector<bool> unitsOptional = std::vector<bool>())
 	{
 		if (unitIdentifiers.size() == 0)
 			return;
@@ -108,26 +111,37 @@ public:
 		// Get an iterator to every relevant unitManager.
 		std::vector<UnitManagerIteratorBase*> unitManagerIterators;
 		for (size_t i = 0; i < unitIdentifiers.size(); i++)
+		{
+			bool found = false;
 			for (size_t j = 0; j < this->unitManagers.size(); j++)
 				if (unitIdentifiers.at(i) == this->unitManagers.at(j)->getIdentifier())
+				{
 					unitManagerIterators.push_back(this->unitManagers.at(j)->begin());
+					found = true;
+					break;
+				}
 
-		// Check that the UnitManagers the UnitManagerIterators point to are not empty (Unit vector, not queue).
-		for (size_t i = 0; i < unitManagerIterators.size(); i++)
-			if (unitManagerIterators.at(i)->size() == 0)
-				return;
+			if (!found || unitManagerIterators.back()->size() == 0)
+			{
+				if (!(i < unitsOptional.size() && unitsOptional[i]))
+					return;
 
-		// Check if iterator UnitManager was found for each of unitIdentifiers.
-		if (unitIdentifiers.size() != unitManagerIterators.size())
-			return;
+				unitsOptional.erase(unitsOptional.begin() + i);
+				unitIdentifiers.erase(unitIdentifiers.begin() + i);
+
+				i--;
+			}
+		}
 
 		// To make sure an each on only untargeted units is only done once (since an iterator on untargeted units is not incremented and wont end the loop that way).
 		bool allUntargeted = true;
 		for (size_t i = 0; i < unitManagerIterators.size(); i++)
 			if (!unitManagerIterators.at(i)->getStoresUntargeted())
+			{
 				allUntargeted = false;
-
- 		size_t biggestEntityId = 0;
+				break;
+			}
+ 		size_t currentEntityId = 0;
 		// For every iterator
 		do 
 		{
@@ -139,26 +153,42 @@ public:
 				do 
 				{
 					if (!unitManagerIterators.at(i)->increment())
-						goto end;
-				} while (unitManagerIterators.at(i)->getGroup().first->getEntityId() < biggestEntityId);
+					{
+						if (!(i < unitsOptional.size() && unitsOptional[i]))
+						{
+							goto end;
+						} else {
+							unitManagerIterators.erase(unitManagerIterators.begin() + i);
+							i--;
+							goto continueInner;
+						}
+					}
+				} while (unitManagerIterators.at(i)->getGroup().first->getEntityId() < currentEntityId);
 
-				if (unitManagerIterators.at(i)->getGroup().first->getEntityId() > biggestEntityId)
+				if (unitManagerIterators.at(i)->getGroup().first->getEntityId() > currentEntityId)
 				{
-					biggestEntityId = unitManagerIterators.at(i)->getGroup().first->getEntityId();
+					currentEntityId = unitManagerIterators.at(i)->getGroup().first->getEntityId();
 
-					if(i != 0)
+					if(i != 0 && (i < unitsOptional.size() && unitsOptional[i]))
 						goto continueOuter;
 				}
 				
+			continueInner:;
 			}
 
 			{
 				UnitGroup unitGroup;
 				for (size_t i = 0; i < unitManagerIterators.size(); i++)
-					unitGroup.units[unitManagerIterators.at(i)->getUnitTypeIdentifier()] = unitManagerIterators.at(i)->getGroup();
+				{
+					if(!(i < unitsOptional.size() && unitsOptional[i])
+						|| unitManagerIterators.at(i)->getStoresUntargeted()
+						|| unitManagerIterators.at(i)->getGroup().first->getEntityId() == currentEntityId)
+						unitGroup.units[unitManagerIterators.at(i)->getUnitTypeIdentifier()] = unitManagerIterators.at(i)->getGroup();
+
+				}
 				system->updateEntity(dt, unitGroup);
 
-				biggestEntityId++; 
+				currentEntityId++; 
 			}
 
 		continueOuter:;

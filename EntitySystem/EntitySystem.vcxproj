@@ -123,17 +123,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Algorithm.h" />
-    <ClInclude Include="src\entities\events\Events.h" />
-    <ClInclude Include="src\entities\units\UnitGroup.h" />
-    <ClInclude Include="src\entities\components\Components.h" />
-    <ClInclude Include="src\entities\EntityManager.h" />
-    <ClInclude Include="src\entities\components\Component.h" />
-    <ClInclude Include="src\entities\units\UnitManager.h" />
-    <ClInclude Include="src\entities\units\UnitManagerIterator.h" />
-    <ClInclude Include="src\entities\events\Event.h" />
-    <ClInclude Include="src\entities\units\Unit.h" />
-    <ClInclude Include="src\entities\units\UnitManagerIteratorBase.h" />
-    <ClInclude Include="src\entities\units\UnitTags.h" />
+    <ClInclude Include="src\events\Events.h" />
+    <ClInclude Include="src\units\UnitGroup.h" />
+    <ClInclude Include="src\components\Components.h" />
+    <ClInclude Include="src\EntityManager.h" />
+    <ClInclude Include="src\components\Component.h" />
+    <ClInclude Include="src\units\UnitManager.h" />
+    <ClInclude Include="src\units\UnitManagerIterator.h" />
+    <ClInclude Include="src\events\Event.h" />
+    <ClInclude Include="src\units\Unit.h" />
+    <ClInclude Include="src\units\UnitManagerIteratorBase.h" />
+    <ClInclude Include="src\units\UnitTags.h" />
     <ClInclude Include="src\systems\System.h" />
     <ClInclude Include="src\systems\Systems.h" />
   </ItemGroup>
