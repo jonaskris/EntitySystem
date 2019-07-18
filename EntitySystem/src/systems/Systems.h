@@ -2,13 +2,14 @@
 #include "System.h"
 #include "../components/Components.h"
 #include "../events/Events.h"
+#include "../entitymanager/EachCallable.h"
 
 class EntityManager;
 
 /*
 	Example system that acts on ComponentA and EventA (UnTargeted).
 */
-class SystemA : public System<ComponentA, EventA>
+class SystemA : public System< Units<ComponentA, EventA> >
 {
 	friend class EntityManager;
 public:
@@ -17,16 +18,12 @@ private:
 	/*
 		Update is called on every update of EntityManager, as long as it is registered in the EntityManager.
 	*/
-	void update(const double& dt) override
+	void update() override
 	{
-		/*
-			To improve performance, one should consider not calling updateEntities on every update call, but at set intervals based on dt or 
-			other variables of the systems internal state. (But completely fine to call every update)
-		*/
-		updateEntities(dt);
+
 	}
 
-	void updateEntity(const double& dt, UnitGroup& units) override
+	void updateEntity(UnitGroup& units) override
 	{
 		// The unit group will contain the unit types that the System template was instantiated with.
 		ComponentA* a = units.get<ComponentA>().first;
@@ -47,23 +44,50 @@ private:
 /*
 	Example system that acts on ComponentA and EventB (Targeted).
 */
-class SystemB : public System<ComponentA, EventB>
+class SystemB : public System< Units<ComponentA, EventB> >
 {
 	friend class EntityManager;
 public:
 	explicit SystemB() {};
 private:
-	void update(const double& dt) override
+	void update() override
 	{
-		updateEntities(dt);
+		
 	}
 
-	void updateEntity(const double& dt, UnitGroup& units) override
+	void updateEntity(UnitGroup& units) override
 	{
 		ComponentA& a = units.get<ComponentA>().first[0];
 		EventB& b = units.get<EventB>().first[0];
 
 		if (b.b)
+		{
+			a.x += (float)dt;
+			a.y += (float)dt;
+			a.z += (float)dt;
+		}
+	}
+};
+
+class SystemC : public System< Units<ComponentA, EventB>, OptionalUnits<false, true> >
+	//public System< ComponentA, EventB::optional>
+{
+	friend class EntityManager;
+public:
+	explicit SystemC() {};
+private:
+	void update() override
+	{
+
+	}
+
+	void updateEntity(UnitGroup& units) override
+	{
+		ComponentA& a = units.get<ComponentA>().first[0];
+		ComponentB* b = units.get<ComponentB>().first;
+		size_t bs = units.get<ComponentB>().second;
+
+		if (bs == 0 || b->b)
 		{
 			a.x += (float)dt;
 			a.y += (float)dt;

@@ -29,9 +29,6 @@
     <ClInclude Include="src\Algorithm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\EntityManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\components\Component.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -60,6 +57,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\units\UnitTags.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\entitymanager\EntityManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\entitymanager\EachCallable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

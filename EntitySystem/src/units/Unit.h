@@ -50,6 +50,39 @@ public:
 	};
 };
 
+struct UnitBase
+{
+	friend class EntityManager;
+private:
+	size_t entityId;
+	bool ignore;
+
+	void setEntityId(const size_t& entityId)
+	{
+		this->entityId = entityId;
+	}
+protected:
+	UnitBase() : entityId(0), ignore(false) {};
+	explicit UnitBase(const size_t& entityId) : entityId(entityId), ignore(false) {};
+public:
+	virtual ~UnitBase() {};
+
+	size_t getEntityId()
+	{
+		return entityId;
+	}
+
+	/*
+		Allows for implicit conversion to size_t for comparison of units.
+	*/
+	operator size_t() const { return entityId; }
+
+	virtual bool getErase() const  { return ignore; };
+	virtual bool getIgnore() const  { return ignore; };
+	virtual void setErase() { ignore = true; };
+	virtual void setIgnore() { ignore = true; };
+};
+
 /*
 	Units are commonality between events and components.
 
@@ -62,37 +95,14 @@ public:
 	Units can also set to be ignored. Ignored units will not remain active and
 	will not be considered by systems. Ignored units will also be erased at end of current update.
 */
-struct Unit
+template <typename UnitType>
+struct Unit : public UnitBase
 {
-	friend class EntityManager;
-private:
-	size_t entityId;
-	bool ignore;
-
-	void setEntityId(const size_t& entityId)
-	{
-		this->entityId = entityId;
-	}
-protected:
-	Unit() : entityId(0), ignore(false) {};
-	explicit Unit(const size_t& entityId) : entityId(entityId), ignore(false) {};
 public:
+	// Used in EachCallable for semantic reasons.
+	static Optional<UnitType> optional;
+
 	virtual ~Unit() {};
-
-	size_t getEntityId()
-	{
-		return entityId;
-	}
-
-	/*
-		Allows for implicit conversion to size_t for comparison of units.
-	*/
-	operator size_t() const { return entityId; }
-
-	virtual bool getErase() const { return ignore; };
-	virtual bool getIgnore() const { return ignore; };
-	virtual void setErase() { ignore = true; };
-	virtual void setIgnore() { ignore = true; };
 };
 
 /*
@@ -102,7 +112,8 @@ public:
 	LimitedLifetimeUnits erase condition is if their lifetime is <= 0.
 	Lifetime is automatically decreased by dt every update.
 */
-struct LimitedLifetimeUnit : public Unit
+template <typename UnitType>
+struct LimitedLifetimeUnit : public Unit<UnitType>
 {
 	friend class EntityManager;
 
@@ -115,8 +126,8 @@ protected:
 	LimitedLifetimeUnit() : lifetime(0.0f) {};
 	explicit LimitedLifetimeUnit(const float& lifetime) : lifetime(lifetime) {}
 
-	explicit LimitedLifetimeUnit(const size_t& entityId) : Unit(entityId), lifetime(0.0f) {};
-	LimitedLifetimeUnit(const size_t& entityId, const float& lifetime) : Unit(entityId), lifetime(lifetime) {}
+	explicit LimitedLifetimeUnit(const size_t& entityId) : UnitBase(entityId), lifetime(0.0f) {};
+	LimitedLifetimeUnit(const size_t& entityId, const float& lifetime) : UnitBase(entityId), lifetime(lifetime) {}
 public:
 	virtual ~LimitedLifetimeUnit() {};
 

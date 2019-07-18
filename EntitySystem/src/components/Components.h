@@ -13,3 +13,9 @@ struct ComponentA : public Component<ComponentA>, UnitStorageSpecifier<Component
 	ComponentA(float x, float y, float z) : x(x), y(y), z(z) {};
 };
 size_t UnitStorageSpecifier<ComponentA>::initialStorageCapacity = 1024;
+
+struct ComponentB : public Component<ComponentB>
+{
+	bool b;
+	ComponentB(bool b) : b(b) {};
+};

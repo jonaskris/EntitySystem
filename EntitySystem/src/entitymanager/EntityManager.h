@@ -9,6 +9,7 @@
 #include "units/UnitManagerIterator.h"
 #include "units/UnitGroup.h"
 #include "components/Component.h"
+#include "EachCallable.h"
 
 struct Unit;
 
@@ -45,12 +46,12 @@ private:
 		Unpacks parameter pack of units when creating an entity, recursive case.
 	*/
 	template <typename UnitType, typename... Rest>
-	void unpackAndStoreUnitsInManagers(const size_t& entityId, const UnitType& unit, const Rest&... rest)
+	void unpackAndStoreUnitsInManagers(const size_t& entityId, const UnitType& unit, const Rest& ... rest)
 	{
 		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
 
 		newUnit(entityId, unit);
-		unpackAndStoreUnitsInManagers(entityId, rest...); 
+		unpackAndStoreUnitsInManagers(entityId, rest...);
 	}
 
 	/*
@@ -89,7 +90,7 @@ private:
 
 public:
 	EntityManager() {};
-	~EntityManager() 
+	~EntityManager()
 	{
 		for (size_t i = 0; i < unitManagers.size(); i++)
 			delete unitManagers[i];
@@ -98,13 +99,16 @@ public:
 	};
 
 	/*
-		Executes a System.updateEntity on every entity that has specified set of unit types.
+		Executes EachCallable.eachCall on every entity that has specified set of unit types.
 
-		If unitsOptional[i] is true, unitIdentifiers[i] will be considered an optional unit, 
-		and System.updateEntity will update an entity, regardless if a unit of that type was found.
+		If unitsOptional[i] is true, unitIdentifiers[i] will be considered an optional unit,
+		and EachCallable.eachCall will be called for an entity, regardless if a unit of that type was found.
 	*/
-	void each(const double& dt, SystemBase* system, std::vector<size_t> unitIdentifiers, std::vector<bool> unitsOptional = std::vector<bool>())
+	void each(EachCallableBase* eachCallable)
 	{
+		std::vector<size_t> unitIdentifiers = eachCallable->getUnitIdentifiers();
+		std::vector<bool> unitsOptional = eachCallable->getOptionalUnits();
+
 		if (unitIdentifiers.size() == 0)
 			return;
 
@@ -141,23 +145,24 @@ public:
 				allUntargeted = false;
 				break;
 			}
- 		size_t currentEntityId = 0;
+		size_t currentEntityId = 0;
 		// For every iterator
-		do 
+		do
 		{
 			for (size_t i = 0; i < unitManagerIterators.size(); i++)
 			{
 				if (unitManagerIterators.at(i)->getStoresUntargeted())
 					continue;
 
-				do 
+				do
 				{
 					if (!unitManagerIterators.at(i)->increment())
 					{
 						if (!(i < unitsOptional.size() && unitsOptional[i]))
 						{
 							goto end;
-						} else {
+						}
+						else {
 							unitManagerIterators.erase(unitManagerIterators.begin() + i);
 							i--;
 							goto continueInner;
@@ -169,10 +174,10 @@ public:
 				{
 					currentEntityId = unitManagerIterators.at(i)->getGroup().first->getEntityId();
 
-					if(i != 0 && (i < unitsOptional.size() && unitsOptional[i]))
+					if (i != 0 && (i < unitsOptional.size() && unitsOptional[i]))
 						goto continueOuter;
 				}
-				
+
 			continueInner:;
 			}
 
@@ -180,20 +185,22 @@ public:
 				UnitGroup unitGroup;
 				for (size_t i = 0; i < unitManagerIterators.size(); i++)
 				{
-					if(!(i < unitsOptional.size() && unitsOptional[i])
+					if (!(i < unitsOptional.size() && unitsOptional[i])
 						|| unitManagerIterators.at(i)->getStoresUntargeted()
 						|| unitManagerIterators.at(i)->getGroup().first->getEntityId() == currentEntityId)
 						unitGroup.units[unitManagerIterators.at(i)->getUnitTypeIdentifier()] = unitManagerIterators.at(i)->getGroup();
 
 				}
-				system->updateEntity(dt, unitGroup);
 
-				currentEntityId++; 
+				eachCallable->eachCall(unitGroup);
+				//system->updateEntity(dt, unitGroup);
+
+				currentEntityId++;
 			}
 
 		continueOuter:;
 		} while (!allUntargeted);
-		end:;
+	end:;
 	}
 
 	/*
@@ -210,12 +217,12 @@ public:
 		Returns the entity.
 	*/
 	template <typename... UnitTypes>
-	size_t newEntity(const UnitTypes&... units)
+	size_t newEntity(const UnitTypes & ... units)
 	{
 		size_t newEntity = entityIdCounter++;
-	
+
 		unpackAndStoreUnitsInManagers(newEntity, units...);
-	
+
 		return newEntity;
 	}
 
@@ -223,7 +230,7 @@ public:
 		Stores a unit in a UnitManager and assigns it to the specified entity.
 	*/
 	template <typename UnitType>
-	size_t newUnit(const size_t& entityId, UnitType unit)
+	size_t newUnit(const size_t & entityId, UnitType unit)
 	{
 		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
 
@@ -237,7 +244,7 @@ public:
 				unitManagers.at(i)->insertUnit(unit);
 				return unit.getEntityId();
 			}
-		
+
 		// If unsuccessful in storing unit above, there were no UnitManager that stores given unit type.
 		// Create a new unit manager that stores the unit type, and insert the unit into the new manager. 
 		unitManagers.push_back(new UnitManager<UnitType>());
@@ -271,7 +278,7 @@ public:
 		// Create a new UnitManager that stores the unit type, and insert the unit into the new manager. 
 		unitManagers.push_back(new UnitManager<UnitType>());
 		unitManagers.back()->insertUnit(unit);
-	
+
 		return unit.getEntityId();
 	}
 
@@ -282,14 +289,15 @@ public:
 		Note: Events are erased after every update automatically.
 	*/
 	template <typename... UnitTypes>
-	void setErase(const size_t& entityId)
-	{	
+	void setErase(const size_t & entityId)
+	{
 		if constexpr (sizeof...(UnitTypes) == 0)
 		{
 			for (size_t i = 0; i < unitManagers.size(); i++)
 				unitManagers[i]->setErase(entityId);
-				
-		} else {
+
+		}
+		else {
 			std::vector<size_t> unitIdentifiers = unpackUnitTypes<UnitTypes...>();
 
 			for (size_t i = 0; i < unitManagers.size(); i++)
@@ -304,14 +312,15 @@ public:
 		If no UnitTypes are specified, all units of the entity are set to be ignored.
 	*/
 	template <typename... UnitTypes>
-	void setIgnore(const size_t& entityId)
+	void setIgnore(const size_t & entityId)
 	{
 		if constexpr (sizeof...(UnitTypes) == 0)
 		{
 			for (size_t i = 0; i < unitManagers.size(); i++)
 				unitManagers[i]->setIgnore(entityId);
 
-		} else {
+		}
+		else {
 			std::vector<size_t> unitIdentifiers = unpackUnitTypes<UnitTypes...>();
 
 			for (size_t i = 0; i < unitManagers.size(); i++)
@@ -326,10 +335,10 @@ public:
 		Returns whether the system was registered successfully.
 	*/
 	template <typename SystemType>
-	void registerSystem(SystemType* system)
+	void registerSystem(SystemType * system)
 	{
 		static_assert(std::is_base_of<SystemBase, SystemType>::value, "SystemType must be derived from SystemBase!");
-		
+
 		systems.push_back(system);
 		systems.back()->setEntityManager(this);
 	}
@@ -346,7 +355,7 @@ public:
 		// Update every system.
 		for (size_t i = 0; i < systems.size(); i++)
 			systems.at(i)->update(dt);
-
+		
 		// PostUpdate every UnitManager. Updates lifetimes and erases units set to be erased.
 		for (size_t i = 0; i < unitManagers.size(); i++)
 			unitManagers.at(i)->postUpdate(dt);
@@ -373,7 +382,7 @@ public:
 		for (size_t i = 0; i < unitManagers.size(); i++)
 			if (unitManagers.at(i)->storesUnitType<UnitType>())
 				return static_cast<UnitManager<UnitType>*>(unitManagers.at(i))->getUnits();
-		
+
 		return nullptr;
 	}
 
@@ -384,7 +393,7 @@ public:
 	{
 		size_t sum = 0;
 		for (size_t i = 0; i < unitManagers.size(); i++)
-				sum += unitManagers.at(i)->size();
+			sum += unitManagers.at(i)->size();
 
 		return sum;
 	};
@@ -394,7 +403,7 @@ public:
 	*/
 	template <typename UnitType>
 	size_t sizeUnitsType() const
-	{ 
+	{
 		static_assert(std::is_base_of<Unit, UnitType>::value && std::is_base_of<UnitTypeIdentifier<UnitType>, UnitType>::value, "UnitType must be derived from Unit and UnitTypeIdentifier!");
 
 		for (size_t i = 0; i < unitManagers.size(); i++)

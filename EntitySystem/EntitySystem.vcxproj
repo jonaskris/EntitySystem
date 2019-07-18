@@ -123,10 +123,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Algorithm.h" />
+    <ClInclude Include="src\entitymanager\EachCallable.h" />
     <ClInclude Include="src\events\Events.h" />
     <ClInclude Include="src\units\UnitGroup.h" />
     <ClInclude Include="src\components\Components.h" />
-    <ClInclude Include="src\EntityManager.h" />
+    <ClInclude Include="src\entitymanager\EntityManager.h" />
     <ClInclude Include="src\components\Component.h" />
     <ClInclude Include="src\units\UnitManager.h" />
     <ClInclude Include="src\units\UnitManagerIterator.h" />
