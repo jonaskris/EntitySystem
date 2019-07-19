@@ -14,9 +14,9 @@
 #define RUN_MEMORY_LEAK_TEST false
 #define RUN_PERFORMANCE_TEST false
 
-
 int main()
 {
+	using namespace entitysystem;
 #if RUN_FUNCTION_TEST
 {
 		// Creating EntityManager...

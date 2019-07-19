@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{4003BF64-BD41-4B7D-A1E6-1550A6F8D488}</ProjectGuid>
     <RootNamespace>EntitySystem</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -41,13 +41,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -119,24 +119,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="entitysystem\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Algorithm.h" />
-    <ClInclude Include="src\entitymanager\EachCallable.h" />
-    <ClInclude Include="src\events\Events.h" />
-    <ClInclude Include="src\units\UnitGroup.h" />
-    <ClInclude Include="src\components\Components.h" />
-    <ClInclude Include="src\entitymanager\EntityManager.h" />
-    <ClInclude Include="src\components\Component.h" />
-    <ClInclude Include="src\units\UnitManager.h" />
-    <ClInclude Include="src\units\UnitManagerIterator.h" />
-    <ClInclude Include="src\events\Event.h" />
-    <ClInclude Include="src\units\Unit.h" />
-    <ClInclude Include="src\units\UnitManagerIteratorBase.h" />
-    <ClInclude Include="src\units\UnitTags.h" />
-    <ClInclude Include="src\systems\System.h" />
-    <ClInclude Include="src\systems\Systems.h" />
+    <ClInclude Include="entitysystem\utils\Algorithm.h" />
+    <ClInclude Include="entitysystem\entitymanager\EachCallable.h" />
+    <ClInclude Include="entitysystem\events\Events.h" />
+    <ClInclude Include="entitysystem\units\Optional.h" />
+    <ClInclude Include="entitysystem\units\UnitGroup.h" />
+    <ClInclude Include="entitysystem\components\Components.h" />
+    <ClInclude Include="entitysystem\entitymanager\EntityManager.h" />
+    <ClInclude Include="entitysystem\components\Component.h" />
+    <ClInclude Include="entitysystem\units\UnitManager.h" />
+    <ClInclude Include="entitysystem\units\UnitManagerIterator.h" />
+    <ClInclude Include="entitysystem\events\Event.h" />
+    <ClInclude Include="entitysystem\units\Unit.h" />
+    <ClInclude Include="entitysystem\units\UnitManagerIteratorBase.h" />
+    <ClInclude Include="entitysystem\units\UnitTags.h" />
+    <ClInclude Include="entitysystem\systems\System.h" />
+    <ClInclude Include="entitysystem\systems\Systems.h" />
+    <ClInclude Include="entitysystem\units\UnitTypeIdentifier.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
