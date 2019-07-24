@@ -20,14 +20,9 @@ namespace entitysystem
 		virtual ~SystemBase() { };
 
 		/*
-			Called on every EntityManager.update once every update before updating individual entities.
+			Called on every EntityManager.update once every update.
 		*/
-		virtual void update(const double& dt) = 0;
-
-		/*
-			Called on every EntityManager.update for each set of entities with UnitTypes.
-		*/
-		virtual void updateEntity(UnitGroup& units) = 0;
+		virtual void update(const double& dt) { };
 	public:
 	};
 
@@ -40,17 +35,15 @@ namespace entitysystem
 	{
 		friend class EntityManager;
 	private:
-		void eachCall(UnitGroup& unitGroup) override { updateEntity(unitGroup); }
+		double deltatime = 0;
 
-		void update(const double& dt) override
+		virtual void updateEntity(const double& dt, UnitGroup& unitGroup) { };
+		void eachCall(UnitGroup& unitGroup) override { updateEntity(deltatime, unitGroup); }
+	protected:
+		void updateEntities(const double& dt)
 		{
-			this->dt = dt;
-			update();
+			deltatime = dt;
 			this->entityManager->each(this);
 		}
-
-		virtual void update() = 0;
-	protected:
-		double dt = 0;
 	};
 }

@@ -120,20 +120,5 @@ system("PAUSE"); // Snapshot and compare Allocations with last snapshot. (Diff) 
 
 {
 }
-
-
-//// Creating EntityManager...
-//EntityManager em = EntityManager();
-//
-//// Registering systems...
-//em.registerSystem(new SystemC());
-//
-//em.newEntity(ComponentA{ 0.0f, 1.0f, 2.0f});
-//em.newEntity(ComponentA{ 3.0f, 4.0f, 5.0f});
-//em.newEntity(ComponentA{ 6.0f, 7.0f, 8.0f});
-//
-//em.update(1.0f);
-
-
 system("PAUSE");
 }

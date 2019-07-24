@@ -4,7 +4,6 @@
 
 namespace entitysystem
 {
-
 	/*
 		Component used for testing purposes.
 

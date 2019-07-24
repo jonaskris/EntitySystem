@@ -28,15 +28,39 @@ namespace entitysystem
 		};
 	private:
 		std::vector<Group> groups;
+
+		// How many Groups starting from back that can be replaced by another.
+		// Used to change value of existing groups, instead of allocating a whole new group.
+		size_t replaceable = 0;
 	public:
+		/*
+			Sets all current groups to be able to be replaced with new values.
+		*/
+		void setReplaceable()
+		{
+			replaceable = groups.size();
+		}
+
 		void insert(const size_t& unitIdentifier, const std::pair<UnitBase*, size_t>& group)
 		{
-			insertSorted(groups, Group{ unitIdentifier, group.first, group.second });
+			insert(unitIdentifier, group.first, group.second);
 		}
 
 		void insert(const size_t& unitIdentifier, UnitBase* const first, const size_t& count)
 		{
-			insertSorted(groups, Group{ unitIdentifier, first, count });
+			if (replaceable > 0)
+			{
+				Group& replaceableGroup = groups.at(groups.size() - replaceable);
+
+				replaceableGroup.unitIdentifier = unitIdentifier;
+				replaceableGroup.first = first;
+				replaceableGroup.count = count;
+				replaceable--;
+				return;
+			}
+
+			//insertSorted(groups, Group{ unitIdentifier, first, count });
+			groups.insert(groups.begin() + (groups.size() - replaceable), Group{ unitIdentifier, first, count });
 		}
 
 		template <typename UnitType>
@@ -44,7 +68,20 @@ namespace entitysystem
 		{
 			static_assert(std::is_base_of<UnitBase, UnitType>::value, "UnitType must be derived from Unit!");
 
-			int index = binarySearch(groups, UnitType::getIdentifier(), 0, groups.size());
+			//int index = binarySearch(groups, UnitType::getIdentifier(), 0, groups.size() - 1);
+
+			int index = -1;
+			for (size_t i = 0; i < groups.size(); i++)
+			{
+				if (groups.at(i).unitIdentifier == UnitType::getIdentifier())
+				{
+					if (i >= groups.size() - replaceable)
+						break;
+
+					index = i;
+					break;
+				}
+			}
 
 			if (index < 0)
 				return std::pair(static_cast<UnitType*>(nullptr), 0);

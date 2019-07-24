@@ -6,7 +6,6 @@
 
 namespace entitysystem
 {
-
 	class EntityManager;
 
 	/*
@@ -14,18 +13,16 @@ namespace entitysystem
 	*/
 	class SystemA : public System< ComponentA, EventA >
 	{
-	public:
-		SystemA() {};
 	private:
 		/*
 			Update is called on every update of EntityManager, as long as it is registered in the EntityManager.
 		*/
-		void update() override
+		void update(const double& dt) override
 		{
-
+			updateEntities(dt);
 		}
 
-		void updateEntity(UnitGroup& units) override
+		void updateEntity(const double& dt, UnitGroup& units) override
 		{
 			// The UnitGroup will contain the Unit types that the System template was instantiated with.
 			ComponentA* a = units.get<ComponentA>().first;
@@ -48,45 +45,18 @@ namespace entitysystem
 	*/
 	class SystemB : public System< ComponentA, EventB >
 	{
-	public:
-		SystemB() {};
 	private:
-		void update() override
+		void update(const double& dt) override
 		{
-
+			updateEntities(dt);
 		}
 
-		void updateEntity(UnitGroup& units) override
+		void updateEntity(const double& dt, UnitGroup& units) override
 		{
 			ComponentA& a = units.get<ComponentA>().first[0];
 			EventB& b = units.get<EventB>().first[0];
 
 			if (b.b)
-			{
-				a.x += (float)dt;
-				a.y += (float)dt;
-				a.z += (float)dt;
-			}
-		}
-	};
-
-	class SystemC : public System< ComponentA, EventB::optional >
-	{
-	public:
-		SystemC() {};
-	private:
-		void update() override
-		{
-
-		}
-
-		void updateEntity(UnitGroup& units) override
-		{
-			ComponentA& a = units.get<ComponentA>().first[0];
-			ComponentB* b = units.get<ComponentB>().first;
-			size_t bs = units.get<ComponentB>().second;
-
-			if (bs == 0 || b->b)
 			{
 				a.x += (float)dt;
 				a.y += (float)dt;

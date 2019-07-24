@@ -23,31 +23,31 @@ namespace entitysystem
 		UnitManager<UnitType>* unitManager;
 
 		// Index of first element and count of elements in group.
-		std::pair<size_t, size_t> currentGroup;
+		std::pair<size_t, size_t> currentGroup = std::pair<size_t, size_t>(0, 0);
 
 		explicit UnitManagerIterator(UnitManager<UnitType>* unitManager) : unitManager(unitManager), currentGroup(std::pair(0, 0)) { };
-
 	public:
 
 		/*
 			Finds the next group of Units with common entityId.
 			Returns false if incrementing leads to out of bounds.
 		*/
-		bool increment() override
+		bool incrementWhileSmallerThan(const size_t& entityId) override
 		{
-			size_t newFirstIndex = currentGroup.first + currentGroup.second;
-			size_t count = 0;
-			size_t sizeUnits = unitManager->units.size();
+			size_t newIndex = currentGroup.first + currentGroup.second;
 
-			if (newFirstIndex >= sizeUnits)
+			while (newIndex < unitManager->units.size() && (unitManager->units.at(newIndex).getEntityId() < entityId || unitManager->units.at(newIndex).getIgnore()))
+				newIndex++;
+
+			if (newIndex == unitManager->units.size())
 				return false;
 
-			size_t entityIdFirstIndex = unitManager->units.at(newFirstIndex);
+			size_t newCount = 1;
+			size_t firstEntityId = unitManager->units.at(newIndex).getEntityId();
+			while (newIndex + newCount < unitManager->units.size() && unitManager->units.at(newIndex + newCount).getEntityId() == firstEntityId)
+				newCount++;
 
-			while (newFirstIndex + count < sizeUnits && unitManager->units.at(newFirstIndex + count).getEntityId() == entityIdFirstIndex)
-				count++;
-
-			currentGroup = std::pair(newFirstIndex, count);
+			currentGroup = std::pair<size_t, size_t>(newIndex, newCount);
 			return true;
 		}
 
@@ -76,7 +76,8 @@ namespace entitysystem
 		*/
 		virtual bool getStoresUntargeted() const override
 		{
-			return std::is_base_of<UnitTag_Untargeted, UnitType>::value;
+			static bool storesUntargeted = std::is_base_of<UnitTag_Untargeted, UnitType>::value;
+			return storesUntargeted;
 		}
 
 		/*
@@ -84,7 +85,17 @@ namespace entitysystem
 		*/
 		UnitManagerIteratorBase* begin() override
 		{
-			currentGroup = std::pair<size_t, size_t>(0, 0);
+			if (getStoresUntargeted())
+				return this;
+
+			size_t newIndex = 0;
+			size_t newCount = 1;
+			size_t firstEntityId = unitManager->units.at(newIndex);
+			while (newIndex + newCount < unitManager->units.size() && unitManager->units.at(newIndex + newCount).getEntityId() == firstEntityId)
+				newCount++;
+
+			currentGroup = std::pair<size_t, size_t>(newIndex, newCount);
+
 			return this;
 		}
 

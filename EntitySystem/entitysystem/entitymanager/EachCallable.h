@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "units/UnitGroup.h"
+#include "../units/UnitGroup.h"
 
 namespace entitysystem
 {
@@ -56,7 +56,9 @@ namespace entitysystem
 		static std::vector<std::pair<size_t, bool>> unpackUnitTypes()
 		{
 			std::vector<std::pair<size_t, bool>> unitIdentifiersUnpacking;
-			unpackUnitTypesHelper<UnitTypes...>(unitIdentifiersUnpacking);
+
+			if constexpr (sizeof...(UnitTypes) != 0)
+				unpackUnitTypesHelper<UnitTypes...>(unitIdentifiersUnpacking);
 
 			return unitIdentifiersUnpacking;
 		}

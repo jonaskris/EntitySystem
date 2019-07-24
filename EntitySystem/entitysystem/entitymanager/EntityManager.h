@@ -1,16 +1,16 @@
 #pragma once
+#include <iostream>
 #include <vector>
 #include <utility>
-#include "systems/System.h"
+#include "../systems/System.h"
 #include "../units/Unit.h"
-#include "units/UnitManager.h"
-#include "units/UnitManagerIterator.h"
-#include "units/UnitGroup.h"
+#include "../units/UnitManager.h"
+#include "../units/UnitManagerIterator.h"
+#include "../units/UnitGroup.h"
 #include "EachCallable.h"
 
 namespace entitysystem
 {
-
 	/*
 		Stores entities, systems and units,
 		and defines their relationship.
@@ -127,7 +127,6 @@ namespace entitysystem
 						return;
 
 					unitIdentifiers.erase(unitIdentifiers.begin() + i);
-
 					i--;
 				}
 			}
@@ -141,7 +140,11 @@ namespace entitysystem
 					break;
 				}
 
-			size_t currentEntityId = 0;
+			// Preallocate UnitGroup.
+			UnitGroup unitGroup;
+			unitGroup.groups.reserve(unitManagerIterators.size());
+
+			size_t targetEntityId = 0;
 			do
 			{
 				for (size_t i = 0; i < unitManagerIterators.size(); i++)
@@ -149,10 +152,8 @@ namespace entitysystem
 					if (unitManagerIterators.at(i)->getStoresUntargeted())
 						continue;
 
-					do
-					{
-						if (!unitManagerIterators.at(i)->increment())
-						{
+					if (unitManagerIterators.at(i)->getGroup().first->getEntityId() < targetEntityId)
+						if (!unitManagerIterators.at(i)->incrementWhileSmallerThan(targetEntityId))
 							if (!(unitIdentifiers.at(i).second))
 							{
 								goto end;
@@ -162,38 +163,84 @@ namespace entitysystem
 								i--;
 								goto continueInner;
 							}
-						}
-					} while (unitManagerIterators.at(i)->getGroup().first->getEntityId() < currentEntityId);
-
-					if (unitManagerIterators.at(i)->getGroup().first->getEntityId() > currentEntityId)
+					if (unitManagerIterators.at(i)->getGroup().first->getEntityId() > targetEntityId && !unitIdentifiers.at(i).second)
 					{
-						currentEntityId = unitManagerIterators.at(i)->getGroup().first->getEntityId();
+						targetEntityId = unitManagerIterators.at(i)->getGroup().first->getEntityId();
 
-						if (i != 0 && unitIdentifiers.at(i).second)
+						if (i != 0)
 							goto continueOuter;
 					}
-
 				continueInner:;
 				}
 
+				// Call eachCallable with units from iterators.	
+				unitGroup.setReplaceable();
+				for (size_t i = 0; i < unitManagerIterators.size(); i++)
 				{
-					UnitGroup unitGroup;
-					for (size_t i = 0; i < unitManagerIterators.size(); i++)
-					{
-						if (!(unitIdentifiers.at(i).second)
-							|| unitManagerIterators.at(i)->getStoresUntargeted()
-							|| unitManagerIterators.at(i)->getGroup().first->getEntityId() == currentEntityId)
+					if (unitManagerIterators.at(i)->getStoresUntargeted()
+						|| unitManagerIterators.at(i)->getGroup().first[0].entityId == targetEntityId)
 						unitGroup.insert(unitManagerIterators.at(i)->getUnitTypeIdentifier(), unitManagerIterators.at(i)->getGroup());
-					}
-
-					eachCallable->eachCall(unitGroup);
-
-					currentEntityId++;
 				}
+
+				eachCallable->eachCall(unitGroup);
+				targetEntityId++;
 
 			continueOuter:;
 			} while (!allUntargeted);
 		end:;
+
+
+			//size_t currentEntityId = 0;
+			//do
+			//{
+			//	for (size_t i = 0; i < unitManagerIterators.size(); i++)
+			//	{
+			//		if (unitManagerIterators.at(i)->getStoresUntargeted())
+			//			continue;
+			//
+			//		while (unitManagerIterators.at(i)->getGroup().first->getEntityId() < currentEntityId)
+			//		{
+			//			if (!unitManagerIterators.at(i)->increment())
+			//			{
+			//				if (!(unitIdentifiers.at(i).second))
+			//				{
+			//					goto end;
+			//				} else {
+			//					unitManagerIterators.erase(unitManagerIterators.begin() + i);
+			//					i--;
+			//					goto continueInner;
+			//				}
+			//			}
+			//		}
+			//
+			//		if (unitManagerIterators.at(i)->getGroup().first->getEntityId() > currentEntityId && !(unitIdentifiers.at(i).second))
+			//		{
+			//			currentEntityId = unitManagerIterators.at(i)->getGroup().first->getEntityId();
+			//
+			//			if (i != 0)
+			//				goto continueOuter;
+			//		}
+			//
+			//	continueInner:;
+			//	}
+			//
+			//	{
+			//		UnitGroup unitGroup;
+			//		for (size_t i = 0; i < unitManagerIterators.size(); i++)
+			//		{
+			//			if (!(unitIdentifiers.at(i).second)
+			//				|| unitManagerIterators.at(i)->getStoresUntargeted()
+			//				|| unitManagerIterators.at(i)->getGroup().first->getEntityId() == currentEntityId)
+			//			unitGroup.insert(unitManagerIterators.at(i)->getUnitTypeIdentifier(), unitManagerIterators.at(i)->getGroup());
+			//		}
+			//
+			//		eachCallable->eachCall(unitGroup);
+			//
+			//		currentEntityId++;
+			//	}
+			//
+			//continueOuter:;
+			//} while (!allUntargeted);
 		}
 
 		/*

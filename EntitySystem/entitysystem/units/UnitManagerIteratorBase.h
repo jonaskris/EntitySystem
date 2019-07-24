@@ -19,7 +19,7 @@ namespace entitysystem
 			Finds the next group of Units with common entityId.
 			Returns false if incrementing leads to out of bounds.
 		*/
-		virtual bool increment() = 0;
+		virtual bool incrementWhileSmallerThan(const size_t& entityId) = 0;
 
 		/*
 			Gets current group.

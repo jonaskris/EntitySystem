@@ -162,9 +162,7 @@ namespace entitysystem
 		{
 			// Insert into Units vector from insertion queue.
 			for (size_t i = 0; i < insertionQueue.size(); i++)
-			{
-				insertSorted(units, insertionQueue[i]);
-			}
+				insertSortedReverse(units, insertionQueue[i]);
 
 			// Empty insertion queue.
 			insertionQueue.clear();

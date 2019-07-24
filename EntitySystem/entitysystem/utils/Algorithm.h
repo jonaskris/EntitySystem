@@ -8,7 +8,7 @@ namespace entitysystem
 		Returns index of element in sorted vector equal to key using binary search.
 	*/
 	template <typename V, typename T>
-	int binarySearch(const std::vector<V>& vec, const T& key, const size_t& low, const size_t& high)
+	int binarySearch(const std::vector<V>& vec, const T& key, const int& low, const int& high)
 	{
 		if (low > high)
 			return -1;
@@ -57,6 +57,23 @@ namespace entitysystem
 
 	template <typename V>
 	void insertSorted(std::vector<V>& vec, const V& newElement)
+	{
+		bool inserted = false;
+		for (auto it = vec.begin(); it != vec.end(); it++)
+		{
+			if (newElement < *it)
+			{
+				vec.insert(it, newElement);
+				inserted = true;
+				break;
+			}
+		}
+		if (!inserted)
+			vec.push_back(newElement);
+	}
+
+	template <typename V>
+	void insertSortedReverse(std::vector<V>& vec, const V& newElement)
 	{
 		bool inserted = false;
 		for (auto it = vec.rbegin(); it != vec.rend(); it++)
