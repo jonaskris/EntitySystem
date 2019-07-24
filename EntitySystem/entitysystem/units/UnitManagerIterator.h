@@ -90,7 +90,7 @@ namespace entitysystem
 
 			size_t newIndex = 0;
 			size_t newCount = 1;
-			size_t firstEntityId = unitManager->units.at(newIndex);
+			size_t firstEntityId = unitManager->units.at(newIndex).getEntityId();
 			while (newIndex + newCount < unitManager->units.size() && unitManager->units.at(newIndex + newCount).getEntityId() == firstEntityId)
 				newCount++;
 

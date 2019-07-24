@@ -120,7 +120,7 @@ namespace entitysystem
 			if (units.size() == 0)
 				return std::pair<UnitBase*, size_t>(static_cast<UnitBase*>(nullptr), 0);
 
-			std::pair<size_t, size_t> indicesSpan = binarySearchGroup(units, entityId, 0, units.size() - 1);
+			std::pair<size_t, size_t> indicesSpan = binarySearchGroup(units, entityId, 0, units.size() - 1, [](const UnitType& lhs) { return lhs.getEntityId(); });
 
 			return std::pair(&(units.at(indicesSpan.first)), (size_t)(indicesSpan.second - indicesSpan.first));
 		}
@@ -130,7 +130,7 @@ namespace entitysystem
 			if (units.size() == 0)
 				return;
 
-			std::pair<size_t, size_t> indicesSpan = binarySearchGroup(units, entityId, 0, units.size() - 1);
+			std::pair<size_t, size_t> indicesSpan = binarySearchGroup(units, entityId, 0, units.size() - 1, [](const UnitType& lhs) { return lhs.getEntityId(); });
 
 			for (size_t i = (size_t)indicesSpan.first; i < indicesSpan.second; i++)
 				units.at(i).setErase();
@@ -141,7 +141,7 @@ namespace entitysystem
 			if (units.size() == 0)
 				return;
 
-			std::pair<size_t, size_t> indicesSpan = binarySearchGroup(units, entityId, 0, units.size() - 1);
+			std::pair<size_t, size_t> indicesSpan = binarySearchGroup(units, entityId, 0, units.size() - 1, [](const UnitType& lhs) { return lhs.getEntityId(); });
 
 			for (size_t i = (size_t)indicesSpan.first; i < indicesSpan.second; i++)
 				units.at(i).setIgnore();
@@ -162,7 +162,7 @@ namespace entitysystem
 		{
 			// Insert into Units vector from insertion queue.
 			for (size_t i = 0; i < insertionQueue.size(); i++)
-				insertSortedReverse(units, insertionQueue[i]);
+				insertSortedReverse(units, insertionQueue[i], [](const UnitType& lhs) { return lhs.getEntityId(); });
 
 			// Empty insertion queue.
 			insertionQueue.clear();

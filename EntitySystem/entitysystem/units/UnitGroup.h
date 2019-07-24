@@ -59,7 +59,6 @@ namespace entitysystem
 				return;
 			}
 
-			//insertSorted(groups, Group{ unitIdentifier, first, count });
 			groups.insert(groups.begin() + (groups.size() - replaceable), Group{ unitIdentifier, first, count });
 		}
 
@@ -67,8 +66,6 @@ namespace entitysystem
 		std::pair<UnitType*, size_t> get()
 		{
 			static_assert(std::is_base_of<UnitBase, UnitType>::value, "UnitType must be derived from Unit!");
-
-			//int index = binarySearch(groups, UnitType::getIdentifier(), 0, groups.size() - 1);
 
 			int index = -1;
 			for (size_t i = 0; i < groups.size(); i++)

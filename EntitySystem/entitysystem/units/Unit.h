@@ -24,15 +24,10 @@ namespace entitysystem
 		UnitBase() : entityId(0), ignore(false) {};
 		explicit UnitBase(const size_t& entityId) : entityId(entityId), ignore(false) {};
 	public:
-		size_t getEntityId()
+		size_t getEntityId() const
 		{
 			return entityId;
 		}
-
-		/*
-			Allows for implicit conversion to size_t for comparison of units entityId.
-		*/
-		operator size_t() const { return entityId; }
 
 		virtual bool getErase() const { return ignore; };
 		virtual bool getIgnore() const { return ignore; };
@@ -58,7 +53,6 @@ namespace entitysystem
 	protected:
 		Unit() {};
 		explicit Unit(const size_t& entityId) : UnitBase(entityId) {};
-
 	public:
 		// Used in EachCallable for semantic reasons.
 		typedef Optional<UnitType> optional;
